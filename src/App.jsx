@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "./components/Navbar";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
@@ -17,21 +17,93 @@ import AboutPage from "./pages/AboutPage";
 import FAQPage from "./pages/FAQPage";
 import ContactPage from "./pages/ContactPage";
 import Footer from "./components/Footer";
+import { supabase } from "./supabase";
 
 export default function App() {
   const [user, setUser] = useState(null); // null = guest
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [questions, setQuestions] = useState(null); // managed in Browse
 
-  const login = (role) => {
+  // ─── Keep user in sync with Supabase auth session ────────────────────────────
+  // This runs on mount and whenever the auth state changes (login / logout).
+  // It merges the real Supabase user (which has the correct UUID .id) with the
+  // role/name information stored in user_metadata.
+  useEffect(() => {
+    // Fetch the current session immediately on first load
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        mergeSupabaseUser(session.user);
+      }
+    });
+
+    // Subscribe to future auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session?.user) {
+          mergeSupabaseUser(session.user);
+        } else {
+          setUser(null);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Builds a user object that includes the real Supabase UUID (.id) plus
+  // the role/name from metadata and a mock-compatible shape for the UI.
+  function mergeSupabaseUser(supabaseUser) {
+    const meta = supabaseUser.user_metadata || {};
+    const role = meta.role || "student";
+    const email = supabaseUser.email || "";
+    const name = meta.full_name || meta.name || email.split("@")[0];
+
+    // Start from the mock user shape so the rest of the UI keeps working,
+    // then overwrite id/email/name/role with real values.
+    let baseUser = {};
     if (role === "admin") {
-      setUser(mockUsers.admin);
+      baseUser = { ...mockUsers.admin };
     } else {
-      setUser(role === "tutor" ? mockUsers.tutor : mockUsers.student);
+      baseUser = role === "tutor" ? { ...mockUsers.tutor } : { ...mockUsers.student };
     }
+
+    setUser({
+      ...baseUser,
+      id: supabaseUser.id,   // ← real UUID for Supabase FK / RLS
+      email,
+      name,
+      role,
+    });
+  }
+
+  const login = (role, email, fullName, supabaseUser) => {
+    // If we have the real Supabase user object, use it to get the correct UUID.
+    if (supabaseUser) {
+      mergeSupabaseUser({ ...supabaseUser, user_metadata: { ...(supabaseUser.user_metadata || {}), role, full_name: fullName } });
+      return;
+    }
+    // Fallback (should not happen in normal flow)
+    let baseUser = {};
+    if (role === "admin") {
+      baseUser = { ...mockUsers.admin };
+    } else {
+      baseUser = role === "tutor" ? { ...mockUsers.tutor } : { ...mockUsers.student };
+    }
+    if (email) baseUser.email = email;
+    if (fullName) {
+      baseUser.name = fullName;
+    } else if (email) {
+      baseUser.name = email.split("@")[0];
+    } else {
+      baseUser.name = baseUser.email.split("@")[0];
+    }
+    setUser(baseUser);
   };
 
-  const logout = () => setUser(null);
+  const logout = () => {
+    supabase.auth.signOut(); // onAuthStateChange will set user to null
+  };
+
 
   const requireAuth = (element) => {
     if (!user) {

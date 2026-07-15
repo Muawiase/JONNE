@@ -33,7 +33,9 @@ export default function LoginPage({ onLogin, user }) {
       setSubmitted(false);
     } else {
       const userRole = data.user.user_metadata?.role || "student";
-      onLogin(userRole);
+      const userFullName = data.user.user_metadata?.full_name || data.user.user_metadata?.name || "";
+      // Pass the real Supabase user so App.jsx can store the correct UUID
+      onLogin(userRole, email, userFullName, data.user);
       if (userRole === "admin") {
         navigate("/dashboard/admin");
       } else {

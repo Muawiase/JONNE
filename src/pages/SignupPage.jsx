@@ -5,6 +5,7 @@ import { supabase } from "../supabase";
 export default function SignupPage({ onLogin, user }) {
   const navigate = useNavigate();
   const [role, setRole] = useState("student");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -38,6 +39,8 @@ export default function SignupPage({ onLogin, user }) {
       options: {
         data: {
           role: role,
+          full_name: fullName,
+          name: fullName,
         },
         emailRedirectTo: `${window.location.origin}/login`,
       },
@@ -88,6 +91,18 @@ export default function SignupPage({ onLogin, user }) {
         )}
 
         <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label className="form-label">Full Name</label>
+            <input
+              className="form-input"
+              type="text"
+              placeholder="Your full name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+            />
+          </div>
+
           <div className="form-group">
             <label className="form-label">Email Address</label>
             <input

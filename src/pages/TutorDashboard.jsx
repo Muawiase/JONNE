@@ -927,8 +927,14 @@ function ProfileSection({ user, profile, setProfile }) {
       <div className="sd-profile-layout">
         {/* Avatar Sidebar */}
         <div className="sd-profile-avatar-card">
-          <div className="sd-profile-avatar" style={{ background: "linear-gradient(135deg, #FF6584, #FF9F43)", color: "white" }}>
-            {profile.name.charAt(0)}
+          <div className="sd-profile-avatar" style={{ background: "linear-gradient(135deg, #FF6584, #FF9F43)", color: "white", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ position: "absolute", zIndex: 1 }}>{(profile.name || "M").charAt(0).toUpperCase()}</span>
+            <img
+              src={`https://unavatar.io/${profile.email}`}
+              alt={profile.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', position: "absolute", zIndex: 2, top: 0, left: 0 }}
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
           </div>
           <div className="sd-profile-name">{profile.name}</div>
           <div className="sd-profile-role"> Verified Tutor {profile.isVerified && ""}</div>
@@ -1099,7 +1105,7 @@ export default function TutorDashboard({ user }) {
   const [balance, setBalance] = useState(320);
 
   const [profile, setProfile] = useState({
-    name: user?.name || "Marcus Chen",
+    name: user?.name || (user?.email ? user.email.split('@')[0] : "marcus"),
     email: user?.email || "marcus@example.com",
     bio: "Full-stack developer by day, coding tutor by passion. I've been coding since I was 14 and I genuinely love helping people break through that 'I don't get it' wall. Specialise in Python, JavaScript, and web dev.",
     subjects: user?.subjects || ["Coding", "Mathematics", "Computer Science"],
@@ -1316,8 +1322,14 @@ export default function TutorDashboard({ user }) {
       {/* Sidebar */}
       <aside className={`sd-sidebar ${sidebarOpen ? "sd-sidebar-open" : ""}`}>
         <div className="sd-sidebar-user">
-          <div className="sd-sidebar-avatar" style={{ background: "linear-gradient(135deg, #FF6584, #FF9F43)" }}>
-            {profile.name.charAt(0)}
+          <div className="sd-sidebar-avatar" style={{ background: "linear-gradient(135deg, #FF6584, #FF9F43)", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ position: "absolute", zIndex: 1 }}>{(profile.name || "M").charAt(0).toUpperCase()}</span>
+            <img
+              src={`https://unavatar.io/${profile.email}`}
+              alt={profile.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', position: "absolute", zIndex: 2, top: 0, left: 0 }}
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
           </div>
           <div>
             <div className="sd-sidebar-name">{profile.name}</div>

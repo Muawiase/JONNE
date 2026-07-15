@@ -291,20 +291,69 @@ function DashboardHome({ user, setActive }) {
   );
 }
 
+/*
+  DB TABLE: questions
+  -----------------------------------------------
+  id            UUID / SERIAL   PRIMARY KEY
+  student_id    UUID            REFERENCES users(id)
+  title         TEXT            NOT NULL
+  subject       TEXT            NOT NULL   -- free-text or chosen from predefined list
+  level         TEXT            NOT NULL
+  description   TEXT            NOT NULL
+  deadline      DATE
+  is_paid       BOOLEAN         DEFAULT false
+  price_per_hour NUMERIC(10,2)
+  status        TEXT            DEFAULT 'open'
+  created_at    TIMESTAMPTZ     DEFAULT now()
+  -----------------------------------------------
+*/
 function PostQuestionSection({ user }) {
   const [form, setForm] = useState({
-    title: "", subject: "", level: "", description: "", deadline: "", isPaid: false, price: "", tags: "",
+    title: "", subject: "", level: "", description: "", deadline: "", isPaid: false, price: "",
   });
-  const [submitted, setSubmitted] = useState(false);
+  const [attachedFile, setAttachedFile] = useState(null);
+  const [fileError, setFileError]   = useState("");
+  const [submitted, setSubmitted]   = useState(false);
 
-  const subjects = ["Mathematics", "Physics", "Chemistry", "Biology", "History", "English", "Economics", "Coding", "Other"];
+  const ALLOWED_TYPES = [
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ];
+  const MAX_SIZE_MB = 10;
+
+  const handleFileChange = (file) => {
+    setFileError("");
+    if (!file) return;
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setFileError("Only PDF and Word documents (.pdf, .doc, .docx) are allowed.");
+      return;
+    }
+    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+      setFileError(`File is too large. Maximum size is ${MAX_SIZE_MB} MB.`);
+      return;
+    }
+    setAttachedFile(file);
+  };
+
+  // Predefined subjects — stored in a `subjects` lookup table in the DB
+  const subjectOptions = [
+    "Mathematics", "Physics", "Chemistry", "Biology",
+    "History", "Geography", "English", "Literature",
+    "Economics", "Business Studies", "Coding / Computer Science",
+    "Art & Design", "Music", "Languages", "Physical Education",
+    "Religious Studies", "Psychology", "Sociology", "Philosophy",
+    "Engineering", "Medicine / Health", "Law", "Other",
+  ];
   const levels = ["Primary", "Middle School", "High School", "University", "Professional"];
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 3000);
-    setForm({ title: "", subject: "", level: "", description: "", deadline: "", isPaid: false, price: "", tags: "" });
+    setForm({ title: "", subject: "", level: "", description: "", deadline: "", isPaid: false, price: "" });
+    setAttachedFile(null);
+    setFileError("");
   };
 
   return (
@@ -331,10 +380,20 @@ function PostQuestionSection({ user }) {
           <div className="sd-form-row">
             <div className="sd-form-group">
               <label className="sd-label">Subject *</label>
-              <select className="sd-input" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} required>
-                <option value="">Select subject</option>
-                {subjects.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+              {/* Combobox: pick from list OR type a custom subject — maps to `subject` TEXT column */}
+              <input
+                id="subject-input"
+                className="sd-input"
+                list="subject-list"
+                placeholder="Select or type a subject…"
+                value={form.subject}
+                onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                autoComplete="off"
+                required
+              />
+              <datalist id="subject-list">
+                {subjectOptions.map((s) => <option key={s} value={s} />)}
+              </datalist>
             </div>
             <div className="sd-form-group">
               <label className="sd-label">Level *</label>
@@ -355,25 +414,73 @@ function PostQuestionSection({ user }) {
               required
             />
           </div>
-          <div className="sd-form-row">
-            <div className="sd-form-group">
-              <label className="sd-label">Deadline</label>
-              <input
-                type="date"
-                className="sd-input"
-                value={form.deadline}
-                onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-              />
-            </div>
-            <div className="sd-form-group">
-              <label className="sd-label">Tags (comma separated)</label>
-              <input
-                className="sd-input"
-                placeholder="e.g. algebra, quadratic, formula"
-                value={form.tags}
-                onChange={(e) => setForm({ ...form, tags: e.target.value })}
-              />
-            </div>
+          <div className="sd-form-group">
+            <label className="sd-label">Deadline</label>
+            <input
+              type="date"
+              className="sd-input"
+              value={form.deadline}
+              onChange={(e) => setForm({ ...form, deadline: e.target.value })}
+              min={new Date().toISOString().split("T")[0]}
+              style={{ maxWidth: 260 }}
+            />
+          </div>
+
+          {/* ── File Attachment (optional) ── */}
+          <div className="sd-form-group">
+            <label className="sd-label">
+              Attach File
+              <span className="sd-label-optional"> — optional</span>
+            </label>
+
+            {attachedFile ? (
+              /* ── Attached state ── */
+              <div className="sd-file-attached">
+                <span className="sd-file-icon">
+                  {attachedFile.name.endsWith(".pdf") ? "📄" : "📝"}
+                </span>
+                <div className="sd-file-info">
+                  <span className="sd-file-name">{attachedFile.name}</span>
+                  <span className="sd-file-size">
+                    {(attachedFile.size / (1024 * 1024)).toFixed(2)} MB
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="sd-file-remove"
+                  title="Remove file"
+                  onClick={() => { setAttachedFile(null); setFileError(""); }}
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              /* ── Drop zone ── */
+              <label
+                className="sd-upload-zone"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleFileChange(e.dataTransfer.files[0]);
+                }}
+              >
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  style={{ display: "none" }}
+                  onChange={(e) => handleFileChange(e.target.files[0])}
+                />
+                <span className="sd-upload-icon">📎</span>
+                <span className="sd-upload-text">
+                  <strong>Click to upload</strong> or drag &amp; drop
+                </span>
+                <span className="sd-upload-hint">PDF, DOC, DOCX — max 10 MB</span>
+              </label>
+            )}
+
+            {fileError && (
+              <p className="sd-file-error">{fileError}</p>
+            )}
           </div>
           <div className="sd-paid-toggle">
             <div className="sd-toggle-wrap" onClick={() => setForm({ ...form, isPaid: !form.isPaid })}>
@@ -698,7 +805,7 @@ function ProfileSection({ user }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     name: user.name,
-    email: "amara.k@student.edu",
+    email: user.email || "amara@example.com",
     bio: "High school student passionate about mathematics and sciences. I use JONNE to get expert help when I'm stuck.",
     grade: "Grade 10",
     school: "Westfield High School",
@@ -713,8 +820,14 @@ function ProfileSection({ user }) {
       <div className="sd-profile-layout">
         {/* Avatar Card */}
         <div className="sd-profile-avatar-card">
-          <div className="sd-profile-avatar" style={{ background: "linear-gradient(135deg,#6C63FF,#4CAF50)" }}>
-            {user.name.charAt(0)}
+          <div className="sd-profile-avatar" style={{ background: "linear-gradient(135deg,#6C63FF,#4CAF50)", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ position: "absolute", zIndex: 1 }}>{user.name.charAt(0).toUpperCase()}</span>
+            <img
+              src={`https://unavatar.io/${user.email || 'amara@example.com'}`}
+              alt={user.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', position: "absolute", zIndex: 2, top: 0, left: 0 }}
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
           </div>
           <div className="sd-profile-name">{form.name}</div>
           <div className="sd-profile-role"> Student</div>
@@ -830,8 +943,14 @@ export default function StudentDashboard({ user }) {
       {/* Sidebar */}
       <aside className={`sd-sidebar ${sidebarOpen ? "sd-sidebar-open" : ""}`}>
         <div className="sd-sidebar-user">
-          <div className="sd-sidebar-avatar" style={{ background: "linear-gradient(135deg,#6C63FF,#4CAF50)" }}>
-            {user.name.charAt(0)}
+          <div className="sd-sidebar-avatar" style={{ background: "linear-gradient(135deg,#6C63FF,#4CAF50)", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ position: "absolute", zIndex: 1 }}>{user.name.charAt(0).toUpperCase()}</span>
+            <img
+              src={`https://unavatar.io/${user.email || 'amara@example.com'}`}
+              alt={user.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', position: "absolute", zIndex: 2, top: 0, left: 0 }}
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
           </div>
           <div>
             <div className="sd-sidebar-name">{user.name}</div>

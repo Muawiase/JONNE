@@ -433,11 +433,17 @@ export default function AdminDashboard({ user }) {
       {/* Sidebar */}
       <aside className={`sd-sidebar ${sidebarOpen ? "sd-sidebar-open" : ""}`}>
         <div className="sd-sidebar-user">
-          <div className="sd-sidebar-avatar" style={{ background: "linear-gradient(135deg,#34495e,#1abc9c)" }}>
-            
+          <div className="sd-sidebar-avatar" style={{ background: "linear-gradient(135deg,#34495e,#1abc9c)", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ position: "absolute", zIndex: 1 }}>{(user?.name || "A").charAt(0).toUpperCase()}</span>
+            <img
+              src={`https://unavatar.io/${user?.email || 'admin@jonne.com'}`}
+              alt={user?.name || "Admin"}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', position: "absolute", zIndex: 2, top: 0, left: 0 }}
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
           </div>
           <div>
-            <div className="sd-sidebar-name">{user?.name || "Admin Mercer"}</div>
+            <div className="sd-sidebar-name">{user?.name || "admin"}</div>
             <div className="sd-sidebar-role"> System Administrator</div>
           </div>
         </div>

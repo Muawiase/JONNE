@@ -1,12 +1,31 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { subjects, educationLevels } from "../mockData";
+import { supabase } from "../supabase";
+import { educationLevels } from "../mockData";
 
 export default function PostQuestionPage({ user }) {
   const navigate = useNavigate();
+
+  // ─── Subjects from Supabase ──────────────────────────────────────────────────
+  const [dbSubjects, setDbSubjects] = useState([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchSubjects() {
+      const { data, error } = await supabase
+        .from("subjects")
+        .select("id, name")
+        .order("name");
+      if (!error) setDbSubjects(data || []);
+      setSubjectsLoading(false);
+    }
+    fetchSubjects();
+  }, []);
+
+  // ─── Form state ──────────────────────────────────────────────────────────────
   const [form, setForm] = useState({
     title: "",
-    subject: "",
+    subjectId: "",   // DB id of selected subject
     level: "",
     description: "",
     deadline: "",
@@ -15,16 +34,89 @@ export default function PostQuestionPage({ user }) {
   });
   const [preview, setPreview] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [fileUploaded, setFileUploaded] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  // ─── File upload ─────────────────────────────────────────────────────────────
+  const fileInputRef = useRef(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => navigate("/browse"), 1800);
+  const selectedSubject = dbSubjects.find(
+    (s) => String(s.id) === String(form.subjectId)
+  );
+
+  const handleFileChange = (e) => {
+    setSelectedFile(e.target.files?.[0] || null);
   };
 
+  // Upload to Supabase Storage bucket "question-files"
+  async function uploadFile(file) {
+    const ext = file.name.split(".").pop();
+    const path = `questions/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage
+      .from("question-files")
+      .upload(path, file, { upsert: false });
+    if (error) throw error;
+    const { data } = supabase.storage.from("question-files").getPublicUrl(path);
+    return data.publicUrl;
+  }
+
+  // ─── Final submit → insert into questions table ──────────────────────────────
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
+    setError("");
+
+    if (!user) {
+      setError("You must be logged in to post a question.");
+      return;
+    }
+
+    // Force user to re-login if they still have the old mock session (where id is a number)
+    if (typeof user.id !== "string" || user.id.length < 10) {
+      const msg = "Your login session is out of date. Please log out and log back in to post questions.";
+      setError(msg);
+      alert(msg);
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      let fileUrl = null;
+      if (selectedFile) {
+        setUploading(true);
+        try { fileUrl = await uploadFile(selectedFile); } catch (err) {
+          console.warn("File upload failed:", err.message);
+        }
+        setUploading(false);
+      }
+
+      const { error: insertError } = await supabase.from("questions").insert({
+        user_id: user.id,
+        title: form.title,
+        subject: selectedSubject ? selectedSubject.name : "", // New schema expects text
+        level: form.level,
+        description: form.description,
+        deadline: form.deadline || null,
+        payment: form.isPaid ? Number(form.pricePerHour) : null,
+      });
+
+      if (insertError) throw insertError;
+
+      setSubmitted(true);
+      setTimeout(() => navigate("/browse"), 1800);
+    } catch (err) {
+      console.error("Question insert error:", err);
+      setError(err.message || "Something went wrong. Please try again.");
+      alert("Error saving question: " + err.message); // Ensure user sees it
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ─── Success screen ──────────────────────────────────────────────────────────
   if (submitted) {
     return (
       <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
@@ -58,6 +150,7 @@ export default function PostQuestionPage({ user }) {
                   <div className="card-inner">
                     <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 24 }}> Question Details</h2>
 
+                    {/* Title */}
                     <div className="form-group">
                       <label className="form-label">Question Title *</label>
                       <input
@@ -71,22 +164,29 @@ export default function PostQuestionPage({ user }) {
                       <p className="form-hint">Be specific — this is the first thing helpers will see.</p>
                     </div>
 
+                    {/* Subject + Level */}
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                       <div className="form-group">
                         <label className="form-label">Subject / Category *</label>
-                        <select
-                          className="form-input"
-                          value={form.subject}
-                          onChange={(e) => set("subject", e.target.value)}
-                          required
-                        >
-                          <option value="">Select a subject…</option>
-                          {subjects.map((s) => (
-                            <option key={s.label} value={s.label}>
-                              {s.icon} {s.label}
-                            </option>
-                          ))}
-                        </select>
+                        {subjectsLoading ? (
+                          <select className="form-input" disabled>
+                            <option>Loading subjects…</option>
+                          </select>
+                        ) : (
+                          <select
+                            className="form-input"
+                            value={form.subjectId}
+                            onChange={(e) => set("subjectId", e.target.value)}
+                            required
+                          >
+                            <option value="">Select a subject…</option>
+                            {dbSubjects.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </div>
                       <div className="form-group">
                         <label className="form-label">Your Education Level *</label>
@@ -104,6 +204,7 @@ export default function PostQuestionPage({ user }) {
                       </div>
                     </div>
 
+                    {/* Description */}
                     <div className="form-group">
                       <label className="form-label">Full Description *</label>
                       <textarea
@@ -117,21 +218,26 @@ export default function PostQuestionPage({ user }) {
                       <p className="form-hint">The more detail you give, the better help you'll receive.</p>
                     </div>
 
+                    {/* Real file input */}
                     <div className="form-group">
                       <label className="form-label">Attach Files (optional)</label>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif"
+                        style={{ display: "none" }}
+                        onChange={handleFileChange}
+                      />
                       <div
                         className="upload-area"
-                        onClick={() => setFileUploaded(true)}
+                        onClick={() => fileInputRef.current?.click()}
+                        style={{ cursor: "pointer" }}
                       >
-                        {fileUploaded ? (
+                        {selectedFile ? (
                           <>
                             <div className="upload-area-icon"></div>
-                            <p style={{ color: "var(--success)", fontWeight: 600 }}>
-                              homework_question.pdf attached
-                            </p>
-                            <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
-                              Click to change
-                            </p>
+                            <p style={{ color: "var(--success)", fontWeight: 600 }}>{selectedFile.name}</p>
+                            <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>Click to change</p>
                           </>
                         ) : (
                           <>
@@ -145,6 +251,7 @@ export default function PostQuestionPage({ user }) {
                       </div>
                     </div>
 
+                    {/* Deadline */}
                     <div className="form-group">
                       <label className="form-label">Deadline</label>
                       <input
@@ -158,6 +265,7 @@ export default function PostQuestionPage({ user }) {
                   </div>
                 </div>
 
+                {/* Payment card */}
                 <div className="card" style={{ marginTop: 20 }}>
                   <div className="card-inner">
                     <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}> How would you like help?</h2>
@@ -220,7 +328,7 @@ export default function PostQuestionPage({ user }) {
                 </div>
               </form>
             ) : (
-              /*  PREVIEW  */
+              /* ── PREVIEW ── */
               <div>
                 <div className="card" style={{ marginBottom: 20 }}>
                   <div className="card-inner">
@@ -238,7 +346,7 @@ export default function PostQuestionPage({ user }) {
                        Preview — This is how your question will look to helpers
                     </div>
                     <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-                      {form.subject && <span className="badge badge-subject">{form.subject}</span>}
+                      {selectedSubject && <span className="badge badge-subject">{selectedSubject.name}</span>}
                       {form.isPaid ? (
                         <span className="badge badge-paid"> ${form.pricePerHour}/hr</span>
                       ) : (
@@ -257,19 +365,38 @@ export default function PostQuestionPage({ user }) {
                          Deadline: {new Date(form.deadline).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
                       </div>
                     )}
-                    {fileUploaded && (
+                    {selectedFile && (
                       <div style={{ marginTop: 10, fontSize: 13, color: "var(--text-muted)" }}>
-                         homework_question.pdf attached
+                         {selectedFile.name} attached
                       </div>
                     )}
                   </div>
                 </div>
+
+                {/* Error banner */}
+                {error && (
+                  <div
+                    style={{
+                      background: "#fef2f2",
+                      border: "1.5px solid #ef4444",
+                      borderRadius: "var(--radius-sm)",
+                      padding: "14px 18px",
+                      color: "#ef4444",
+                      fontSize: 14,
+                      fontWeight: 500,
+                      marginBottom: 16,
+                    }}
+                  >
+                     {error}
+                  </div>
+                )}
 
                 <div style={{ display: "flex", gap: 12 }}>
                   <button
                     className="btn btn-secondary"
                     style={{ flex: 1, justifyContent: "center" }}
                     onClick={() => setPreview(false)}
+                    disabled={submitting}
                   >
                     ← Edit Question
                   </button>
@@ -277,8 +404,11 @@ export default function PostQuestionPage({ user }) {
                     className="btn btn-primary"
                     style={{ flex: 1, justifyContent: "center" }}
                     onClick={handleSubmit}
+                    disabled={submitting}
                   >
-                     Post Question
+                    {submitting
+                      ? uploading ? " Uploading file…" : " Posting…"
+                      : " Post Question"}
                   </button>
                 </div>
               </div>

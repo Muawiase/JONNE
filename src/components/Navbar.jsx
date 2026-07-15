@@ -51,9 +51,15 @@ export default function Navbar({ user, onLogout }) {
               <div className="navbar-user" style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div
                   className="navbar-avatar"
-                  style={{ background: user.avatarColor, width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 13 }}
+                  style={{ background: user.avatarColor, width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 13, position: "relative", overflow: "hidden" }}
                 >
-                  {getInitials(user.name)}
+                  <span style={{ position: "absolute", zIndex: 1 }}>{getInitials(user.name)}</span>
+                  <img
+                    src={`https://unavatar.io/${user.email}`}
+                    alt={user.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', position: "absolute", zIndex: 2, top: 0, left: 0 }}
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
                 </div>
                 <button
                   className="btn btn-sm"
@@ -118,9 +124,15 @@ export default function Navbar({ user, onLogout }) {
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div
                     className="navbar-avatar"
-                    style={{ background: user.avatarColor, width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 14 }}
+                    style={{ background: user.avatarColor, width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 14, position: "relative", overflow: "hidden" }}
                   >
-                    {getInitials(user.name)}
+                    <span style={{ position: "absolute", zIndex: 1 }}>{getInitials(user.name)}</span>
+                    <img
+                      src={`https://unavatar.io/${user.email}`}
+                      alt={user.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', position: "absolute", zIndex: 2, top: 0, left: 0 }}
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
                   </div>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: "14px" }}>{user.name}</div>

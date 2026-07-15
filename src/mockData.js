@@ -320,7 +320,7 @@ export const mockTutors = [
 export const mockUsers = {
   student: {
     id: 1,
-    name: "Amara K.",
+    name: "amara",
     email: "amara@example.com",
     role: "student",
     avatar: "",
@@ -331,7 +331,7 @@ export const mockUsers = {
   },
   tutor: {
     id: 2,
-    name: "Marcus Chen",
+    name: "marcus",
     email: "marcus@example.com",
     role: "tutor",
     avatar: "",
@@ -345,7 +345,7 @@ export const mockUsers = {
   },
   admin: {
     id: 3,
-    name: "Alex Mercer",
+    name: "admin",
     email: "admin@jonne.com",
     role: "admin",
     avatar: "",
