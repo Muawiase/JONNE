@@ -41,15 +41,15 @@ export function QuestionCard({ question, onGuestAction, user }) {
         </Link>
         <p className="question-card-excerpt">{question.description}</p>
         <div className="tags-row">
-          {question.tags.slice(0, 3).map((t) => (
+          {(question.tags || []).slice(0, 3).map((t) => (
             <span className="tag" key={t}>#{t}</span>
           ))}
         </div>
         <div className="question-card-footer">
           <div className="question-card-meta">
-            <span>by {question.studentName}</span>
-            <span>{question.responses} {question.responses === 1 ? "response" : "responses"}</span>
-            <span>Due {new Date(question.deadline).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+            <span>by {question.studentName || "Student"}</span>
+            <span>{question.responses || 0} {(question.responses || 0) === 1 ? "response" : "responses"}</span>
+            <span>Due {new Date(question.deadline || new Date().toISOString()).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
           </div>
           <Link to={`/question/${question.id}`}>
             <button className="btn btn-sm btn-primary" onClick={() => {

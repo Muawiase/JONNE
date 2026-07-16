@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { mockQuestions, mockTutors, subjects } from "../mockData";
+import { mockTutors, subjects } from "../mockData";
+import { supabase } from "../supabase";
 import { QuestionCard, TutorCard } from "../components/Cards";
 import GuestModal from "../components/GuestModal";
 
@@ -20,14 +21,37 @@ export default function BrowsePage({ user, onGuestAction, forceGuestModal }) {
   const [sort, setSort] = useState("newest");
   const [tab, setTab] = useState("questions"); // 'questions' | 'tutors'
   const [showModal, setShowModal] = useState(!!forceGuestModal);
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (forceGuestModal && !user) setShowModal(true);
   }, [forceGuestModal, user]);
 
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      setLoading(true);
+      const { data, error } = await supabase.from("questions").select("*").order('created_at', { ascending: false });
+      if (!error && data) {
+        const mapped = data.map(q => ({
+          ...q,
+          isPaid: q.payment !== null && q.payment > 0,
+          pricePerHour: q.payment || 0,
+          status: 'open',
+          responses: 0,
+          postedAt: q.created_at,
+          urgency: 'medium',
+        }));
+        setQuestions(mapped);
+      }
+      setLoading(false);
+    };
+    fetchQuestions();
+  }, []);
+
   const urgencyWeight = { high: 3, medium: 2, low: 1 };
 
-  const filtered = mockQuestions
+  const filtered = questions
     .filter((q) => {
       const matchSearch =
         q.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -212,7 +236,13 @@ export default function BrowsePage({ user, onGuestAction, forceGuestModal }) {
               </select>
             </div>
 
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div className="card no-results">
+                <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>
+                  Loading questions...
+                </div>
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="card no-results">
                 <div className="no-results-icon" style={{ display: "flex", justifyContent: "center", marginBottom: 16, color: "var(--text-muted)", fontStyle: "normal" }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>

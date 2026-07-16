@@ -1,5 +1,7 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { mockQuestions, mockTutors } from "../mockData";
+import { mockTutors } from "../mockData";
+import { supabase } from "../supabase";
 import { QuestionCard } from "../components/Cards";
 
 const howSteps = [
@@ -34,7 +36,29 @@ const subjects = [
 ];
 
 export default function LandingPage({ user }) {
-  const featured = mockQuestions.slice(0, 3);
+  const [featured, setFeatured] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      setLoading(true);
+      const { data, error } = await supabase.from("questions").select("*").order('created_at', { ascending: false }).limit(3);
+      if (!error && data) {
+        const mapped = data.map(q => ({
+          ...q,
+          isPaid: q.payment !== null && q.payment > 0,
+          pricePerHour: q.payment || 0,
+          status: 'open',
+          responses: 0,
+          postedAt: q.created_at,
+          urgency: 'medium',
+        }));
+        setFeatured(mapped);
+      }
+      setLoading(false);
+    };
+    fetchQuestions();
+  }, []);
 
   return (
     <div>
@@ -226,7 +250,15 @@ export default function LandingPage({ user }) {
             </Link>
           </div>
           <div className="questions-grid">
-            {featured.map((q) => (
+            {loading ? (
+              <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)", gridColumn: "1 / -1" }}>
+                Loading questions...
+              </div>
+            ) : featured.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)", gridColumn: "1 / -1" }}>
+                No questions found.
+              </div>
+            ) : featured.map((q) => (
               <QuestionCard key={q.id} question={q} user={null} />
             ))}
           </div>

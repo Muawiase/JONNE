@@ -1,31 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { mockQuestions, mockTutors } from "../mockData";
+import { mockTutors } from "../mockData";
+import { supabase } from "../supabase";
 import GuestModal from "../components/GuestModal";
 
-const mockBids = [
-  {
-    tutorId: 1,
-    bidPrice: 22,
-    message:
-      "I've taught this topic to over 50 students — I'll walk you through it step by step with worked examples. I'm available today.",
-    accepted: false,
-  },
-  {
-    tutorId: 2,
-    bidPrice: 0,
-    message:
-      "Happy to help for free! I remember struggling with this exact topic. Let's hop on a quick call.",
-    accepted: false,
-  },
-  {
-    tutorId: 4,
-    bidPrice: 15,
-    message:
-      "I can share a great visual breakdown and some memory devices that really work for this. Let me help you!",
-    accepted: false,
-  },
-];
+
 
 const mockChat = [
   { role: "student", text: "Hi! Can you explain the first step? I don't understand where the formula comes from.", time: "10:32 AM" },
@@ -36,11 +15,62 @@ const mockChat = [
 
 export default function QuestionDetailPage({ user, onGuestAction }) {
   const { id } = useParams();
-  const question = mockQuestions.find((q) => q.id === Number(id));
-  const [accepted, setAccepted] = useState(null);
+  const [question, setQuestion] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [accepted, setAccepted] = useState(false);
+  const [bids, setBids] = useState([]);
+  const [loadingBids, setLoadingBids] = useState(true);
+  const [showBidForm, setShowBidForm] = useState(false);
+  const [bidMessage, setBidMessage] = useState("");
+  const [bidPrice, setBidPrice] = useState("");
+  const [submittingBid, setSubmittingBid] = useState(false);
   const [chatMsg, setChatMsg] = useState("");
   const [chatMessages, setChatMessages] = useState(mockChat);
   const [showModal, setShowModal] = useState(false);
+
+  const fetchBids = async () => {
+    setLoadingBids(true);
+    const { data } = await supabase.from('bids').select('*').eq('question_id', id).order('created_at', { ascending: false });
+    if (data) {
+      setBids(data);
+      if (data.some(b => b.accepted)) setAccepted(true);
+    }
+    setLoadingBids(false);
+  };
+
+  useEffect(() => {
+    const fetchQuestion = async () => {
+      setLoading(true);
+      const { data, error } = await supabase.from('questions').select('*').eq('id', id).single();
+      if (!error && data) {
+        setQuestion({
+          ...data,
+          isPaid: data.payment !== null && data.payment > 0,
+          pricePerHour: data.payment || 0,
+          status: data.status || 'open',
+          responses: 0,
+          tags: [],
+          grade: data.level,
+          studentName: "Student",
+          user_id: data.user_id,
+          deadline: data.deadline || new Date().toISOString()
+        });
+      }
+      setLoading(false);
+    };
+    if (id) {
+      fetchQuestion();
+      fetchBids();
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="page" style={{ textAlign: "center", paddingTop: 80 }}>
+        <h2 style={{ marginTop: 16 }}>Loading question...</h2>
+      </div>
+    );
+  }
 
   if (!question) {
     return (
@@ -54,11 +84,40 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
     );
   }
 
-  const getTutor = (tid) => mockTutors.find((t) => t.id === tid);
-
-  const handleAccept = (tutorId) => {
+  const handleAccept = async (bidId) => {
     if (!user) { setShowModal(true); return; }
-    setAccepted(tutorId);
+    const { error } = await supabase.from('bids').update({ accepted: true }).eq('id', bidId);
+    if (!error) {
+      setAccepted(true);
+      fetchBids();
+    } else {
+      alert("Error accepting bid.");
+    }
+  };
+
+  const submitBid = async () => {
+    if (!user) { setShowModal(true); return; }
+    if (!bidMessage.trim()) return;
+    setSubmittingBid(true);
+    
+    const finalPrice = question.isPaid ? parseFloat(bidPrice || 0) : 0;
+    const { error } = await supabase.from('bids').insert({
+      question_id: id,
+      tutor_id: user.id,
+      tutor_name: user.name,
+      bid_price: finalPrice,
+      message: bidMessage
+    });
+    
+    if (!error) {
+      setShowBidForm(false);
+      setBidMessage("");
+      setBidPrice("");
+      fetchBids();
+    } else {
+      alert("Error submitting bid.");
+    }
+    setSubmittingBid(false);
   };
 
   const sendChat = () => {
@@ -139,7 +198,7 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
           {/* HELPERS / BIDS */}
           <div className="card helpers-section">
             <div className="helpers-title">
-              {question.isPaid ? "Tutor Bids" : "Volunteers"} ({mockBids.length})
+              {question.isPaid ? "Tutor Bids" : "Volunteers"} ({bids.length})
               {!user && (
                 <span style={{ fontSize: 13, color: "var(--text-muted)", fontWeight: 400 }}>
                   — Sign up to accept a helper
@@ -147,54 +206,47 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
               )}
             </div>
 
-            {mockBids.map((bid, i) => {
-              const tutor = getTutor(bid.tutorId);
-              if (!tutor) return null;
-              const isAccepted = accepted === bid.tutorId;
+            {loadingBids ? (
+              <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)" }}>Loading bids...</div>
+            ) : bids.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "20px", color: "var(--text-muted)", fontStyle: "italic" }}>No offers yet.</div>
+            ) : bids.map((bid, i) => {
+              const isAccepted = bid.accepted;
               return (
                 <div
-                  key={i}
+                  key={bid.id || i}
                   className="helper-card"
                   style={isAccepted ? { borderColor: "var(--success)", background: "var(--success-light)" } : {}}
                 >
-                  <Link to={`/tutor/${tutor.id}`}>
-                    <div style={{ width: 52, height: 52, borderRadius: "50%", background: tutor.avatarColor + "22", color: tutor.avatarColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, flexShrink: 0 }}>
-                      {tutor.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
-                    </div>
-                  </Link>
+                  <div style={{ width: 52, height: 52, borderRadius: "50%", background: "var(--primary-light)", color: "var(--primary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, flexShrink: 0 }}>
+                    {(bid.tutor_name || "Tutor").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
+                  </div>
                   <div className="helper-info">
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <Link to={`/tutor/${tutor.id}`}>
-                        <span className="helper-name">{tutor.name}</span>
-                      </Link>
-                      {tutor.isVerifiedTutor ? (
-                        <span className="badge badge-verified" style={{ fontSize: 11 }}> Verified</span>
-                      ) : (
-                        <span className="badge badge-peer" style={{ fontSize: 11 }}>Peer</span>
-                      )}
+                      <span className="helper-name">{bid.tutor_name}</span>
+                      <span className="badge badge-peer" style={{ fontSize: 11 }}>Peer</span>
                     </div>
                     <div className="helper-bid">
-                      {bid.bidPrice === 0 ? (
+                      {bid.bid_price === 0 ? (
                         <span style={{ color: "var(--free-color)", fontWeight: 700 }}>Offering free help</span>
                       ) : (
-                        <span style={{ color: "var(--primary)", fontWeight: 700 }}>${bid.bidPrice}/hr</span>
+                        <span style={{ color: "var(--primary)", fontWeight: 700 }}>${bid.bid_price}/hr</span>
                       )}
-                      &nbsp;·&nbsp;
-                      <span style={{ color: "var(--accent-warm)" }}>{"".repeat(Math.floor(tutor.rating))}</span>
-                      &nbsp;{tutor.rating}
                     </div>
                     <p className="helper-message">"{bid.message}"</p>
                   </div>
                   <div>
                     {isAccepted ? (
-                      <span className="badge badge-free" style={{ padding: "8px 14px" }}>Accepted</span>
+                      <span className="badge badge-free" style={{ padding: "8px 14px", background: "var(--success-light)", color: "var(--success)" }}>Accepted</span>
                     ) : (
-                      <button
-                        className="btn btn-sm btn-success"
-                        onClick={() => handleAccept(bid.tutorId)}
-                      >
-                        Accept
-                      </button>
+                      user?.id === question.user_id && (
+                        <button
+                          className="btn btn-sm btn-success"
+                          onClick={() => handleAccept(bid.id)}
+                        >
+                          Accept
+                        </button>
+                      )
                     )}
                   </div>
                 </div>
@@ -202,25 +254,56 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
             })}
 
             {user?.role === "tutor" && !accepted && (
-              <div
-                style={{
-                  marginTop: 20,
-                  padding: "20px 24px",
-                  border: "2px dashed var(--primary)",
-                  borderRadius: "var(--radius-sm)",
-                  textAlign: "center",
-                  cursor: "pointer",
-                  color: "var(--primary)",
-                  fontWeight: 600,
-                  fontSize: 14,
-                  transition: "background 0.2s",
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = "var(--primary-light)"}
-                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                onClick={() => alert("In a real app, this would open a bid/offer form!")}
-              >
-                + Offer to help {question.isPaid ? `at your rate` : "for free"}
-              </div>
+              showBidForm ? (
+                <div style={{ marginTop: 20, padding: 24, border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", background: "white" }}>
+                  <h4 style={{ marginBottom: 16, fontSize: 15 }}>Submit your offer</h4>
+                  <textarea
+                    style={{ width: "100%", padding: 12, border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", minHeight: 80, marginBottom: 12, resize: "vertical" }}
+                    placeholder="Message to student..."
+                    value={bidMessage}
+                    onChange={(e) => setBidMessage(e.target.value)}
+                  />
+                  {question.isPaid && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                      <label style={{ fontSize: 14, fontWeight: 600 }}>Hourly Rate ($)</label>
+                      <input
+                        type="number"
+                        style={{ padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", width: 100 }}
+                        value={bidPrice}
+                        onChange={(e) => setBidPrice(e.target.value)}
+                      />
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button className="btn btn-sm btn-primary" onClick={submitBid} disabled={submittingBid}>
+                      {submittingBid ? "Submitting..." : "Submit Bid"}
+                    </button>
+                    <button className="btn btn-sm btn-secondary" onClick={() => setShowBidForm(false)}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    marginTop: 20,
+                    padding: "20px 24px",
+                    border: "2px dashed var(--primary)",
+                    borderRadius: "var(--radius-sm)",
+                    textAlign: "center",
+                    cursor: "pointer",
+                    color: "var(--primary)",
+                    fontWeight: 600,
+                    fontSize: 14,
+                    transition: "background 0.2s",
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "var(--primary-light)"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                  onClick={() => setShowBidForm(true)}
+                >
+                  + Offer to help {question.isPaid ? `at your rate` : "for free"}
+                </div>
+              )
             )}
           </div>
 

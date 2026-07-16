@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { mockQuestions, mockTutors, subjects } from "../mockData";
+import { mockTutors, subjects } from "../mockData";
+import { supabase } from "../supabase";
 
 //  INITIAL SEED DATA 
 const initialBids = [
@@ -90,8 +91,8 @@ const getNavItems = (pendingBidsCount, unreadNotifsCount) => [
 //  SUB-COMPONENTS 
 
 // 1. DASHBOARD HOME
-function DashboardHome({ user, bids, setBids, notifications, setNotifications, setActive, completedCount }) {
-  const activeSessionsCount = mockQuestions.filter(q => q.status === "in-progress" && [2, 9].includes(q.id)).length;
+function DashboardHome({ user, bids, setBids, notifications, setNotifications, setActive, completedCount, allQuestions }) {
+  const activeSessionsCount = allQuestions.filter(q => q.status === "in-progress" && [2, 9].includes(q.id)).length;
   const unreadCount = notifications.filter((n) => !n.read).length;
   const pendingBidsCount = bids.filter((b) => b.status === "pending").length;
 
@@ -133,7 +134,7 @@ function DashboardHome({ user, bids, setBids, notifications, setNotifications, s
           <button className="sd-link-btn" onClick={() => setActive("answers")}>View all answers →</button>
         </div>
         <div className="sd-list">
-          {mockQuestions
+          {allQuestions
             .filter((q) => [2, 9].includes(q.id) && q.status !== "solved")
             .map((q) => (
               <div className="sd-list-item" key={q.id}>
@@ -178,7 +179,7 @@ function DashboardHome({ user, bids, setBids, notifications, setNotifications, s
 }
 
 // 2. BROWSE QUESTIONS
-function BrowseQuestionsSection({ bids, onAddBid, tutorSubjects }) {
+function BrowseQuestionsSection({ bids, onAddBid, tutorSubjects, allQuestions, loading }) {
   const [search, setSearch] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
   const [filterType, setFilterType] = useState("all"); // all, paid, free
@@ -215,7 +216,7 @@ function BrowseQuestionsSection({ bids, onAddBid, tutorSubjects }) {
   };
 
   // Filter open questions
-  const openQuestions = mockQuestions.filter((q) => q.status === "open");
+  const openQuestions = allQuestions.filter((q) => q.status === "open");
 
   const filtered = openQuestions.filter((q) => {
     const matchesSearch =
@@ -327,7 +328,11 @@ function BrowseQuestionsSection({ bids, onAddBid, tutorSubjects }) {
 
       {/* Questions list */}
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)", background: "white", borderRadius: "var(--radius-md)" }}>
+            Loading questions...
+          </div>
+        ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)", background: "white", borderRadius: "var(--radius-md)" }}>
              No open questions matching filters.
           </div>
@@ -536,8 +541,8 @@ function SubmitBidsSection({ bids, onCancelBid, onEditBid }) {
 }
 
 // 4. MY ANSWERS
-function MyAnswersSection({ onSolveQuestion, completedList }) {
-  const activeSessions = mockQuestions.filter((q) => [2, 9].includes(q.id) && q.status !== "solved");
+function MyAnswersSection({ onSolveQuestion, completedList, allQuestions }) {
+  const activeSessions = allQuestions.filter((q) => [2, 9].includes(q.id) && q.status !== "solved");
 
   return (
     <div className="sd-section">
@@ -1104,6 +1109,28 @@ export default function TutorDashboard({ user }) {
   const [completedList, setCompletedList] = useState([]);
   const [balance, setBalance] = useState(320);
 
+  const [allQuestions, setAllQuestions] = useState([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(true);
+
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      setLoadingQuestions(true);
+      const { data, error } = await supabase.from("questions").select("*").order('created_at', { ascending: false });
+      if (!error && data) {
+        const mapped = data.map(q => ({
+          ...q,
+          isPaid: q.payment !== null && q.payment > 0,
+          pricePerHour: q.payment || 0,
+          status: 'open',
+          responses: 0,
+        }));
+        setAllQuestions(mapped);
+      }
+      setLoadingQuestions(false);
+    };
+    fetchQuestions();
+  }, []);
+
   const [profile, setProfile] = useState({
     name: user?.name || (user?.email ? user.email.split('@')[0] : "marcus"),
     email: user?.email || "marcus@example.com",
@@ -1239,6 +1266,7 @@ export default function TutorDashboard({ user }) {
             setNotifications={setNotifications}
             setActive={setActive}
             completedCount={completedList.length + 71}
+            allQuestions={allQuestions}
           />
         );
       case "browse":
@@ -1247,6 +1275,8 @@ export default function TutorDashboard({ user }) {
             bids={bids}
             onAddBid={handleAddBid}
             tutorSubjects={profile.subjects}
+            allQuestions={allQuestions}
+            loading={loadingQuestions}
           />
         );
       case "bids":
@@ -1262,6 +1292,7 @@ export default function TutorDashboard({ user }) {
           <MyAnswersSection
             onSolveQuestion={handleSolveQuestion}
             completedList={completedList}
+            allQuestions={allQuestions}
           />
         );
       case "earnings":
@@ -1305,6 +1336,7 @@ export default function TutorDashboard({ user }) {
             setNotifications={setNotifications}
             setActive={setActive}
             completedCount={completedList.length + 71}
+            allQuestions={allQuestions}
           />
         );
     }

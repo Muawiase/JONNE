@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
-  mockQuestions,
   mockTutors,
   subjects as initialSubjects,
   mockPlatformTransactions as initialTransactions,
   mockReports as initialReports
 } from "../mockData";
+import { supabase } from "../supabase";
 
 // Expanded initial users list for the management screen
 const initialUsers = [
@@ -29,7 +29,27 @@ export default function AdminDashboard({ user }) {
 
   // Core states to support real-time user action feedback
   const [users, setUsers] = useState(initialUsers);
-  const [questions, setQuestions] = useState(mockQuestions);
+  const [questions, setQuestions] = useState([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(true);
+
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      setLoadingQuestions(true);
+      const { data, error } = await supabase.from("questions").select("*").order('created_at', { ascending: false });
+      if (!error && data) {
+        const mapped = data.map(q => ({
+          ...q,
+          isPaid: q.payment !== null && q.payment > 0,
+          pricePerHour: q.payment || 0,
+          status: 'open',
+          responses: 0,
+        }));
+        setQuestions(mapped);
+      }
+      setLoadingQuestions(false);
+    };
+    fetchQuestions();
+  }, []);
   const [categories, setCategories] = useState(initialSubjects);
   const [transactions, setTransactions] = useState(initialTransactions);
   const [reports, setReports] = useState(initialReports);
@@ -770,7 +790,15 @@ export default function AdminDashboard({ user }) {
 
               {/* Questions Moderation Feed */}
               <div className="sd-question-list">
-                {questions
+                {loadingQuestions ? (
+                  <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)", background: "white", borderRadius: "var(--radius-md)" }}>
+                    Loading questions...
+                  </div>
+                ) : questions.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)", background: "white", borderRadius: "var(--radius-md)" }}>
+                    No questions found.
+                  </div>
+                ) : questions
                   .filter((q) => {
                     const matchesSearch = q.title.toLowerCase().includes(questionSearch.toLowerCase()) || q.description.toLowerCase().includes(questionSearch.toLowerCase());
                     const matchesStatus = questionStatusFilter === "all" ? true :

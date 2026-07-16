@@ -1,14 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { mockQuestions } from "../mockData";
 import { supabase } from "../supabase";
 
 //  MOCK DATA 
-const myQuestions = [
-  ...mockQuestions.filter((q) => q.studentId === 1 || q.studentId === 4).slice(0, 4),
-  { ...mockQuestions[5], status: "solved", studentId: 1 },
-];
-
 const mockBids = [
   {
     id: 1,
@@ -205,11 +199,15 @@ const NAV_ITEMS = [
 
 //  SECTIONS 
 
-function DashboardHome({ user, setActive }) {
+function DashboardHome({ user, setActive, myQuestions, loading }) {
   const open = myQuestions.filter((q) => q.status === "open");
   const inProgress = myQuestions.filter((q) => q.status === "in-progress");
   const solved = myQuestions.filter((q) => q.status === "solved");
   const unread = mockNotifications.filter((n) => !n.read).length;
+
+  if (loading) {
+    return <div className="sd-section" style={{ padding: 40, textAlign: "center" }}>Loading dashboard...</div>;
+  }
 
   return (
     <div className="sd-section">
@@ -308,7 +306,7 @@ function DashboardHome({ user, setActive }) {
   created_at    TIMESTAMPTZ     DEFAULT now()
   -----------------------------------------------
 */
-function PostQuestionSection({ user }) {
+function PostQuestionSection({ user, onPosted }) {
   const [form, setForm] = useState({
     title: "", subject: "", level: "", description: "", deadline: "", isPaid: false, price: "",
   });
@@ -384,6 +382,7 @@ function PostQuestionSection({ user }) {
       setForm({ title: "", subject: "", level: "", description: "", deadline: "", isPaid: false, price: "" });
       setAttachedFile(null);
       setFileError("");
+      if (onPosted) onPosted();
     } catch (err) {
       console.error("Question insert error:", err);
       setError(err.message || "Something went wrong. Please try again.");
@@ -556,9 +555,13 @@ function PostQuestionSection({ user }) {
   );
 }
 
-function MyQuestionsSection() {
+function MyQuestionsSection({ myQuestions, loading }) {
   const [filter, setFilter] = useState("all");
   const filtered = filter === "all" ? myQuestions : myQuestions.filter((q) => q.status === filter);
+
+  if (loading) {
+    return <div className="sd-section" style={{ padding: 40, textAlign: "center" }}>Loading questions...</div>;
+  }
 
   return (
     <div className="sd-section">
@@ -844,7 +847,7 @@ function NotificationsSection() {
   );
 }
 
-function ProfileSection({ user }) {
+function ProfileSection({ user, myQuestions }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     name: user.name,
@@ -963,18 +966,41 @@ function ProfileSection({ user }) {
 export default function StudentDashboard({ user }) {
   const [active, setActive] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [myQuestions, setMyQuestions] = useState([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(true);
+
+  const fetchQuestions = async () => {
+    if (!user?.id) return;
+    setLoadingQuestions(true);
+    const { data, error } = await supabase.from("questions").select("*").eq("user_id", user.id).order('created_at', { ascending: false });
+    if (!error && data) {
+      const mapped = data.map(q => ({
+        ...q,
+        isPaid: q.payment !== null && q.payment > 0,
+        pricePerHour: q.payment || 0,
+        status: 'open',
+        responses: 0,
+      }));
+      setMyQuestions(mapped);
+    }
+    setLoadingQuestions(false);
+  };
+
+  useEffect(() => {
+    fetchQuestions();
+  }, [user?.id]);
 
   const renderSection = () => {
     switch (active) {
-      case "dashboard":      return <DashboardHome user={user} setActive={setActive} />;
-      case "post":           return <PostQuestionSection user={user} />;
-      case "my-questions":   return <MyQuestionsSection />;
+      case "dashboard":      return <DashboardHome user={user} setActive={setActive} myQuestions={myQuestions} loading={loadingQuestions} />;
+      case "post":           return <PostQuestionSection user={user} onPosted={fetchQuestions} />;
+      case "my-questions":   return <MyQuestionsSection myQuestions={myQuestions} loading={loadingQuestions} />;
       case "bids":           return <BidsSection setActive={setActive} />;
       case "payments":       return <PaymentsSection />;
       case "downloads":      return <DownloadsSection />;
       case "notifications":  return <NotificationsSection />;
-      case "profile":        return <ProfileSection user={user} />;
-      default:               return <DashboardHome user={user} setActive={setActive} />;
+      case "profile":        return <ProfileSection user={user} myQuestions={myQuestions} />;
+      default:               return <DashboardHome user={user} setActive={setActive} myQuestions={myQuestions} loading={loadingQuestions} />;
     }
   };
 
