@@ -39,10 +39,10 @@ export default function LandingPage({ user }) {
   return (
     <div>
       {/*  HERO  */}
-      <section className="hero" style={{ overflow: "hidden", position: "relative" }}>
+      <section className="hero">
         <div className="hero-blob" />
-        <div className="container" style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "40px", alignItems: "center" }}>
-          <div className="hero-content animate-up" style={{ zIndex: 2 }}>
+        <div className="container hero-grid">
+          <div className="hero-content animate-up">
             <div className="hero-eyebrow">
               Study help for everyone — free or paid
             </div>
@@ -78,47 +78,18 @@ export default function LandingPage({ user }) {
             </div>
           </div>
 
-          {/* Right Floating Elements (Desktop only) */}
-          <div className="hero-visual desktop-only" style={{ position: "relative", height: "360px", zIndex: 2 }}>
-            <div className="card glass-panel float-slow" style={{ position: "absolute", top: "10px", left: "20px", width: "280px", border: "1px solid rgba(255,255,255,0.4)", borderRadius: "var(--radius-md)", background: "rgba(255,255,255,0.15)", color: "white", boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
-              <div className="card-inner" style={{ padding: "16px 20px" }}>
-                <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "8px" }}>
-                  <div style={{ background: "var(--accent)", color: "white", borderRadius: "50%", width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 700 }}>TD</div>
-                  <div>
-                    <h4 style={{ fontSize: "14px", fontWeight: 700 }}>Python Flask API</h4>
-                    <span style={{ fontSize: "11px", opacity: 0.8 }}>Matched with Tutor Dave</span>
-                  </div>
-                </div>
-                <p style={{ fontSize: "12px", opacity: 0.9, lineHeight: 1.5 }}>"Debugged in 15 mins! Highly recommended."</p>
-              </div>
-            </div>
-
-            <div className="card glass-panel float-delayed" style={{ position: "absolute", bottom: "20px", right: "10px", width: "260px", border: "1px solid rgba(255,255,255,0.4)", borderRadius: "var(--radius-md)", background: "rgba(255,255,255,0.2)", color: "white", boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
-              <div className="card-inner" style={{ padding: "16px 20px" }}>
-                <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "8px" }}>
-                  <div style={{ background: "var(--free-color)", color: "white", borderRadius: "50%", width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 700 }}>AH</div>
-                  <div>
-                    <h4 style={{ fontSize: "14px", fontWeight: 700 }}>Algebra Help</h4>
-                    <span className="badge badge-free" style={{ padding: "1px 6px", fontSize: "9px" }}>FREE</span>
-                  </div>
-                </div>
-                <p style={{ fontSize: "12px", opacity: 0.9, lineHeight: 1.5 }}>"Mitosis vs Meiosis diagram uploaded!"</p>
+          <div className="hero-visual desktop-only">
+            <div className="hero-understanding-glow" aria-hidden="true" />
+            <div className="hero-understanding-wrap">
+              <div className="hero-understanding">
+                <img
+                  src="/images/understanding.jpg"
+                  alt="From confusion to clarity — two minds connecting through understanding"
+                />
               </div>
             </div>
           </div>
         </div>
-        
-        {/* Style block for responsive grid */}
-        <style>{`
-          @media (max-width: 900px) {
-            .hero > .container {
-              grid-template-columns: 1fr !important;
-            }
-            .hero-visual {
-              display: none !important;
-            }
-          }
-        `}</style>
       </section>
 
       {/*  STATS BAR  */}
@@ -288,7 +259,7 @@ export default function LandingPage({ user }) {
       </section>
 
       {/*  FINAL CTA  */}
-      <section style={{ background: "linear-gradient(135deg, var(--primary), var(--accent))", padding: "80px 0", color: "white", textAlign: "center" }}>
+      <section className="landing-cta">
         <div className="container">
           <h2 style={{ fontSize: 36, fontWeight: 900, marginBottom: 16 }}>Ready to stop being stuck?</h2>
           <p style={{ opacity: 0.88, fontSize: 18, marginBottom: 40, maxWidth: 480, margin: "0 auto 40px" }}>
