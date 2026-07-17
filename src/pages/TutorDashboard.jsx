@@ -1,86 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { mockTutors, subjects } from "../mockData";
 import { supabase } from "../supabase";
 
-//  INITIAL SEED DATA 
-const initialBids = [
-  {
-    id: 1,
-    questionId: 1,
-    questionTitle: "How do I solve quadratic equations using the quadratic formula?",
-    bidPrice: 20,
-    message: "I specialize in algebra and can walk you through this step by step with easy examples!",
-    status: "pending",
-    submittedAt: "2026-07-13",
-  },
-  {
-    id: 2,
-    questionId: 3,
-    questionTitle: "Explain the causes and consequences of the French Revolution",
-    bidPrice: 15,
-    message: "History major here. I can help you structure your essay and outline main themes.",
-    status: "pending",
-    submittedAt: "2026-07-14",
-  },
-  {
-    id: 3,
-    questionId: 5,
-    questionTitle: "Help me understand supply and demand elasticity — with real examples",
-    bidPrice: 22,
-    message: "Happy to help! I can break down demand elasticity using simple products like coffee.",
-    status: "accepted",
-    submittedAt: "2026-07-12",
-  },
-];
-
-const initialWithdrawals = [
-  { id: "WTH-209", date: "2026-07-10", amount: 150, method: "PayPal (marcus@example.com)", status: "completed" },
-  { id: "WTH-108", date: "2026-06-25", amount: 300, method: "Bank Account (•••• 5678)", status: "completed" },
-];
-
-const initialNotifications = [
-  {
-    id: 1,
-    title: "Bid Accepted!",
-    body: "Rachel T. accepted your bid on 'Supply and Demand Elasticity'.",
-    time: "2 hours ago",
-    read: false,
-    icon: "",
-    color: "#4CAF50",
-  },
-  {
-    id: 2,
-    title: "New Match Found",
-    body: "A new question in Coding: 'Flask deployment API issues' matches your subjects.",
-    time: "5 hours ago",
-    read: false,
-    icon: "",
-    color: "#2196F3",
-  },
-  {
-    id: 3,
-    title: "Withdrawal Sent",
-    body: "Your payout of $150 to PayPal has been successfully completed.",
-    time: "4 days ago",
-    read: true,
-    icon: "",
-    color: "#FF9800",
-  },
-];
-
-const initialLedger = [
-  { id: "PAY-901", student: "Daniel O.", subject: "Coding", date: "2026-07-12", amount: 180, status: "Completed" },
-  { id: "PAY-902", student: "Rachel T.", subject: "Economics", date: "2026-07-11", amount: 220, status: "Completed" },
-  { id: "PAY-903", student: "James W.", subject: "Writing", date: "2026-07-08", amount: 120, status: "Completed" },
-  { id: "PAY-904", student: "Amara K.", subject: "Mathematics", date: "2026-07-05", amount: 160, status: "Completed" },
-];
+//  INITIAL SEED DATA
+const initialBids = [];
+const initialWithdrawals = [];
+const initialNotifications = [];
+const initialLedger = [];
 
 //  NAV ITEMS FOR SIDEBAR 
 const getNavItems = (pendingBidsCount, unreadNotifsCount) => [
   { id: "dashboard", label: "Dashboard", icon: "" },
   { id: "browse", label: "Browse Questions", icon: "" },
-  { id: "bids", label: "Submit Bids", icon: "", badge: pendingBidsCount },
+  { id: "bids", label: "My Bids", icon: "", badge: pendingBidsCount },
   { id: "answers", label: "My Answers", icon: "" },
   { id: "earnings", label: "Earnings", icon: "" },
   { id: "withdrawals", label: "Withdrawals", icon: "" },
@@ -399,7 +332,7 @@ function BrowseQuestionsSection({ bids, onAddBid, tutorSubjects, allQuestions, l
   );
 }
 
-// 3. SUBMIT BIDS
+// 3. MY BIDS
 function SubmitBidsSection({ bids, onCancelBid, onEditBid }) {
   const [editingBidId, setEditingBidId] = useState(null);
   const [editPrice, setEditPrice] = useState("");
@@ -422,7 +355,7 @@ function SubmitBidsSection({ bids, onCancelBid, onEditBid }) {
   return (
     <div className="sd-section">
       <div className="sd-page-header">
-        <h1> Submit Bids</h1>
+        <h1> My Bids</h1>
         <p>Manage and update bids you have submitted on student questions.</p>
       </div>
 
@@ -509,7 +442,7 @@ function SubmitBidsSection({ bids, onCancelBid, onEditBid }) {
           <h2 className="sd-subheading" style={{ marginTop: 36 }}> Bid History ({history.length})</h2>
           <div className="sd-bids-grid">
             {history.map((bid) => (
-              <div className={`sd-bid-card ${bid.status === "accepted" ? "sd-bid-accepted" : ""}`} key={bid.id} style={{ opacity: 0.85 }}>
+              <div className={`sd-bid-card ${bid.status === "accepted" ? "sd-bid-accepted" : ""}`} key={bid.id} style={{ opacity: bid.status === "accepted" ? 1 : 0.85 }}>
                 <div className="sd-bid-header">
                   <div className="sd-bid-info">
                     <div className="sd-bid-name">{bid.questionTitle}</div>
@@ -522,14 +455,32 @@ function SubmitBidsSection({ bids, onCancelBid, onEditBid }) {
                       color: bid.status === "accepted" ? "#4CAF50" : "#F44336",
                     }}
                   >
-                    {bid.status === "accepted" ? "Accepted" : "Declined"}
+                    {bid.status === "accepted" ? " Accepted" : "Declined"}
                   </div>
                 </div>
-                <p className="sd-bid-message" style={{ margin: "12px 0", fontStyle: "italic" }}>"{bid.message}"</p>
+                <p className="sd-bid-message" style={{ margin: "12px 0", fontStyle: "italic" }}>"{ bid.message}"</p>
                 {bid.status === "accepted" && (
-                  <Link to={`/question/${bid.questionId}`} className="btn btn-primary btn-sm" style={{ width: "fit-content" }}>
-                     Go to Session Chat
-                  </Link>
+                  <>
+                    {/* Chat unlock banner */}
+                    <div style={{
+                      background: "linear-gradient(135deg, #E8F5E9, #F1F8E9)",
+                      border: "1px solid #A5D6A7",
+                      borderRadius: "var(--radius-md)",
+                      padding: "10px 14px",
+                      marginBottom: 12,
+                      fontSize: 13,
+                      color: "#2E7D32",
+                      fontWeight: 600,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}>
+                       The student accepted your bid — chat is now open!
+                    </div>
+                    <Link to={`/question/${bid.questionId}`} className="btn btn-primary btn-sm" style={{ width: "fit-content" }}>
+                       Open Session Chat
+                    </Link>
+                  </>
                 )}
               </div>
             ))}
@@ -1102,12 +1053,29 @@ export default function TutorDashboard({ user }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // States
-  const [bids, setBids] = useState(initialBids);
+  const [bids, setBids] = useState(() => {
+    try {
+      const saved = localStorage.getItem("jonne_tutor_bids");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [withdrawals, setWithdrawals] = useState(initialWithdrawals);
   const [notifications, setNotifications] = useState(initialNotifications);
   const [ledger, setLedger] = useState(initialLedger);
   const [completedList, setCompletedList] = useState([]);
   const [balance, setBalance] = useState(320);
+
+  // Helper to persist bids
+  const updateBids = (newBids) => {
+    setBids(newBids);
+    try {
+      localStorage.setItem("jonne_tutor_bids", JSON.stringify(newBids));
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const [allQuestions, setAllQuestions] = useState([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
@@ -1152,8 +1120,10 @@ export default function TutorDashboard({ user }) {
       message: newBidData.message,
       status: "pending",
       submittedAt: new Date().toISOString().split("T")[0],
+      chatOpen: false,
     };
-    setBids([newBidObj, ...bids]);
+    const updatedBids = [newBidObj, ...bids];
+    updateBids(updatedBids);
 
     // Send a notification alert
     const newNotif = {
@@ -1168,18 +1138,71 @@ export default function TutorDashboard({ user }) {
     setNotifications([newNotif, ...notifications]);
   };
 
+  // Action: React to a student accepting a bid (called from localStorage event)
+  const handleBidAcceptedByStudent = useCallback((acceptedEvent) => {
+    setBids((prevBids) => {
+      // Try to match by questionId since bid IDs differ between dashboards
+      const updated = prevBids.map((b) => {
+        if (b.questionId === acceptedEvent.questionId && b.status === "pending") {
+          return { ...b, status: "accepted", chatOpen: true };
+        }
+        return b;
+      });
+
+      // Only fire a notification if something actually changed
+      const changed = updated.some((b, i) => b.status !== prevBids[i].status);
+      if (changed) {
+        try {
+          localStorage.setItem("jonne_tutor_bids", JSON.stringify(updated));
+        } catch (e) {
+          console.error(e);
+        }
+        const notif = {
+          id: Date.now(),
+          title: "🎉 Bid Accepted!",
+          body: `A student accepted your bid on "${acceptedEvent.questionTitle}". Chat is now open!`,
+          time: "Just now",
+          read: false,
+          icon: "",
+          color: "#4CAF50",
+        };
+        setNotifications((prev) => [notif, ...prev]);
+      }
+      return updated;
+    });
+  }, []);
+
+  // Listen for accepted bid events from StudentDashboard (via localStorage)
+  useEffect(() => {
+    const handleStorage = (e) => {
+      if (e.key === "jonne_accepted_bids" && e.newValue) {
+        try {
+          const accepted = JSON.parse(e.newValue);
+          if (accepted.length > 0) {
+            handleBidAcceptedByStudent(accepted[accepted.length - 1]);
+          }
+        } catch (err) {
+          console.warn("Error parsing accepted bids", err);
+        }
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [handleBidAcceptedByStudent]);
+
   // Action: Withdraw / Cancel Bid
   const handleCancelBid = (bidId) => {
-    setBids(bids.filter((b) => b.id !== bidId));
+    const updated = bids.filter((b) => b.id !== bidId);
+    updateBids(updated);
   };
 
   // Action: Edit Bid
   const handleEditBid = (bidId, newPrice, newMsg) => {
-    setBids(
-      bids.map((b) =>
-        b.id === bidId ? { ...b, bidPrice: newPrice, message: newMsg } : b
-      )
+    const updated = bids.map((b) =>
+      b.id === bidId ? { ...b, bidPrice: newPrice, message: newMsg } : b
     );
+    updateBids(updated);
   };
 
   // Action: Solve Question (Complete Answering Session)

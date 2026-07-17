@@ -3,10 +3,11 @@ import { Link } from "react-router-dom";
 import { supabase } from "../supabase";
 
 //  MOCK DATA 
-const mockBids = [
+const initialMockBids = [
   {
     id: 1,
     tutor: "Dr. Fatima Al-Hassan",
+    tutorId: 1,
     avatar: "",
     color: "#6C63FF",
     question: "How do I solve quadratic equations using the quadratic formula?",
@@ -22,6 +23,7 @@ const mockBids = [
   {
     id: 2,
     tutor: "Zara Williams",
+    tutorId: 5,
     avatar: "",
     color: "#A29BFE",
     question: "How do I solve quadratic equations using the quadratic formula?",
@@ -37,6 +39,7 @@ const mockBids = [
   {
     id: 3,
     tutor: "James K.",
+    tutorId: 6,
     avatar: "",
     color: "#00CEC9",
     question: "Explain the causes and consequences of the French Revolution",
@@ -45,11 +48,38 @@ const mockBids = [
     message: "History grad student here. I can provide detailed notes and a video session.",
     rating: 4.7,
     reviews: 89,
-    status: "accepted",
+    status: "pending",
     submittedAt: "2026-07-02T09:00:00Z",
     isVerified: true,
   },
 ];
+
+// Helper: persist accepted bid events to localStorage so TutorDashboard can react
+function saveAcceptedBidEvent(bid) {
+  try {
+    const existing = JSON.parse(localStorage.getItem("jonne_accepted_bids") || "[]");
+    const alreadySaved = existing.some((b) => b.bidId === bid.id);
+    if (!alreadySaved) {
+      existing.push({
+        bidId: bid.id,
+        tutorId: bid.tutorId,
+        tutorName: bid.tutor,
+        questionId: bid.questionId,
+        questionTitle: bid.question,
+        rate: bid.rate,
+        acceptedAt: new Date().toISOString(),
+      });
+      localStorage.setItem("jonne_accepted_bids", JSON.stringify(existing));
+      // Trigger storage event for the TutorDashboard listening in the same tab
+      window.dispatchEvent(new StorageEvent("storage", {
+        key: "jonne_accepted_bids",
+        newValue: JSON.stringify(existing),
+      }));
+    }
+  } catch (e) {
+    console.warn("localStorage not available", e);
+  }
+}
 
 const mockPayments = [
   {
@@ -186,24 +216,24 @@ const statusConfig = {
   solved: { label: "Solved", cls: "status-solved", icon: "", color: "#2196F3" },
 };
 
-const NAV_ITEMS = [
+const buildNavItems = (pendingBidsCount, unreadNotifsCount) => [
   { id: "dashboard", label: "Dashboard", icon: "" },
   { id: "post", label: "Post Question", icon: "" },
   { id: "my-questions", label: "My Questions", icon: "" },
-  { id: "bids", label: "Bids", icon: "", badge: mockBids.filter((b) => b.status === "pending").length },
+  { id: "bids", label: "Bids", icon: "", badge: pendingBidsCount },
   { id: "payments", label: "Payments", icon: "" },
   { id: "downloads", label: "Downloads", icon: "" },
-  { id: "notifications", label: "Notifications", icon: "", badge: mockNotifications.filter((n) => !n.read).length },
+  { id: "notifications", label: "Notifications", icon: "", badge: unreadNotifsCount },
   { id: "profile", label: "Profile", icon: "" },
 ];
 
 //  SECTIONS 
 
-function DashboardHome({ user, setActive, myQuestions, loading }) {
+function DashboardHome({ user, setActive, myQuestions, loading, bids, notifications }) {
   const open = myQuestions.filter((q) => q.status === "open");
   const inProgress = myQuestions.filter((q) => q.status === "in-progress");
   const solved = myQuestions.filter((q) => q.status === "solved");
-  const unread = mockNotifications.filter((n) => !n.read).length;
+  const unread = notifications.filter((n) => !n.read).length;
 
   if (loading) {
     return <div className="sd-section" style={{ padding: 40, textAlign: "center" }}>Loading dashboard...</div>;
@@ -229,7 +259,7 @@ function DashboardHome({ user, setActive, myQuestions, loading }) {
           { icon: "", num: open.length, label: "Open", color: "#4CAF50", onClick: () => setActive("my-questions") },
           { icon: "", num: inProgress.length, label: "In Progress", color: "#FF9800", onClick: () => setActive("my-questions") },
           { icon: "", num: solved.length, label: "Solved", color: "#2196F3", onClick: () => setActive("my-questions") },
-          { icon: "", num: mockBids.length, label: "Total Bids", color: "#E91E63", onClick: () => setActive("bids") },
+          { icon: "", num: bids.length, label: "Total Bids", color: "#E91E63", onClick: () => setActive("bids") },
           { icon: "", num: unread, label: "Unread Alerts", color: "#FF5722", onClick: () => setActive("notifications") },
         ].map((s) => (
           <div className="sd-stat-card" key={s.label} onClick={s.onClick} style={{ "--accent-color": s.color }}>
@@ -274,7 +304,7 @@ function DashboardHome({ user, setActive, myQuestions, loading }) {
           <button className="sd-link-btn" onClick={() => setActive("notifications")}>View all →</button>
         </div>
         <div className="sd-list">
-          {mockNotifications.slice(0, 3).map((n) => (
+          {notifications.slice(0, 3).map((n) => (
             <div className="sd-list-item" key={n.id} style={{ opacity: n.read ? 0.65 : 1 }}>
               <div className="sd-notif-icon" style={{ background: n.color + "18", color: n.color }}>{n.icon}</div>
               <div className="sd-list-item-body">
@@ -631,10 +661,36 @@ function MyQuestionsSection({ myQuestions, loading }) {
   );
 }
 
-function BidsSection({ setActive }) {
+function BidsSection({ bids, setBids, notifications, setNotifications }) {
   const [selected, setSelected] = useState(null);
-  const pending = mockBids.filter((b) => b.status === "pending");
-  const accepted = mockBids.filter((b) => b.status === "accepted");
+  const pending = bids.filter((b) => b.status === "pending");
+  const accepted = bids.filter((b) => b.status === "accepted");
+  const declined = bids.filter((b) => b.status === "declined");
+
+  const handleAccept = (bid) => {
+    // Update bid status
+    setBids((prev) => prev.map((b) => b.id === bid.id ? { ...b, status: "accepted" } : b));
+
+    // Notify student
+    const notif = {
+      id: Date.now(),
+      type: "bid_accepted",
+      icon: "",
+      color: "#4CAF50",
+      title: "Bid accepted!",
+      body: `You accepted ${bid.tutor}'s bid for "${bid.question.slice(0, 50)}...". Chat is now open!`,
+      time: "Just now",
+      read: false,
+    };
+    setNotifications((prev) => [notif, ...prev]);
+
+    // Persist event so TutorDashboard can react
+    saveAcceptedBidEvent(bid);
+  };
+
+  const handleDecline = (bidId) => {
+    setBids((prev) => prev.map((b) => b.id === bidId ? { ...b, status: "declined" } : b));
+  };
 
   return (
     <div className="sd-section">
@@ -662,8 +718,18 @@ function BidsSection({ setActive }) {
                 <div className="sd-bid-question">For: "{bid.question.slice(0, 55)}..."</div>
                 <p className="sd-bid-message">"{bid.message}"</p>
                 <div className="sd-bid-actions">
-                  <button className="btn btn-primary btn-sm"> Accept Bid</button>
-                  <button className="btn btn-secondary btn-sm"> Decline</button>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={(e) => { e.stopPropagation(); handleAccept(bid); }}
+                  >
+                     Accept Bid
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={(e) => { e.stopPropagation(); handleDecline(bid.id); }}
+                  >
+                     Decline
+                  </button>
                   <Link to={`/question/${bid.questionId}`}><button className="btn btn-sm" style={{ background: "#f5f5f5", color: "#404040" }}>View Q →</button></Link>
                 </div>
               </div>
@@ -688,14 +754,48 @@ function BidsSection({ setActive }) {
                 </div>
                 <div className="sd-bid-question">For: "{bid.question.slice(0, 55)}..."</div>
                 <p className="sd-bid-message">"{bid.message}"</p>
+                {/* Chat is unlocked once bid is accepted */}
+                <div style={{ background: "linear-gradient(135deg, #E8F5E9, #F1F8E9)", border: "1px solid #A5D6A7", borderRadius: "var(--radius-md)", padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#2E7D32", fontWeight: 600 }}>
+                   Chat is now open with {bid.tutor}!
+                </div>
                 <div className="sd-bid-actions">
-                  <button className="btn btn-primary btn-sm"> Message Tutor</button>
+                  <Link to={`/question/${bid.questionId}`} className="btn btn-primary btn-sm">
+                     Open Chat
+                  </Link>
                   <button className="btn btn-secondary btn-sm"> Schedule Session</button>
                 </div>
               </div>
             ))}
           </div>
         </>
+      )}
+
+      {declined.length > 0 && (
+        <>
+          <h2 className="sd-subheading" style={{ marginTop: 32 }}> Declined Bids ({declined.length})</h2>
+          <div className="sd-bids-grid">
+            {declined.map((bid) => (
+              <div className="sd-bid-card" key={bid.id} style={{ opacity: 0.6 }}>
+                <div className="sd-bid-header">
+                  <div className="sd-bid-avatar" style={{ background: bid.color + "22", color: bid.color }}>{bid.avatar}</div>
+                  <div className="sd-bid-info">
+                    <div className="sd-bid-name">{bid.tutor}</div>
+                    <div className="sd-bid-rating"> {bid.rating} · {bid.reviews} reviews</div>
+                  </div>
+                  <div className="sd-bid-rate" style={{ background: "#FFEBEE", color: "#F44336" }}>Declined</div>
+                </div>
+                <div className="sd-bid-question">For: "{bid.question.slice(0, 55)}..."</div>
+                <p className="sd-bid-message">"{bid.message}"</p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {bids.length === 0 && (
+        <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)", background: "white", borderRadius: "var(--radius-md)" }}>
+           No bids yet. Tutors will start bidding on your questions soon!
+        </div>
       )}
     </div>
   );
@@ -809,11 +909,10 @@ function DownloadsSection() {
   );
 }
 
-function NotificationsSection() {
-  const [notifs, setNotifs] = useState(mockNotifications);
-  const unread = notifs.filter((n) => !n.read).length;
+function NotificationsSection({ notifications, setNotifications }) {
+  const unread = notifications.filter((n) => !n.read).length;
 
-  const markAllRead = () => setNotifs(notifs.map((n) => ({ ...n, read: true })));
+  const markAllRead = () => setNotifications(notifications.map((n) => ({ ...n, read: true })));
 
   return (
     <div className="sd-section">
@@ -827,11 +926,11 @@ function NotificationsSection() {
         </button>
       )}
       <div className="sd-notif-list">
-        {notifs.map((n) => (
+        {notifications.map((n) => (
           <div
             className={`sd-notif-item ${!n.read ? "sd-notif-unread" : ""}`}
             key={n.id}
-            onClick={() => setNotifs(notifs.map((x) => x.id === n.id ? { ...x, read: true } : x))}
+            onClick={() => setNotifications(notifications.map((x) => x.id === n.id ? { ...x, read: true } : x))}
           >
             <div className="sd-notif-icon-lg" style={{ background: n.color + "18", color: n.color }}>{n.icon}</div>
             <div className="sd-notif-body">
@@ -968,6 +1067,8 @@ export default function StudentDashboard({ user }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [myQuestions, setMyQuestions] = useState([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
+  const [bids, setBids] = useState(initialMockBids);
+  const [notifications, setNotifications] = useState(mockNotifications);
 
   const fetchQuestions = async () => {
     if (!user?.id) return;
@@ -990,17 +1091,21 @@ export default function StudentDashboard({ user }) {
     fetchQuestions();
   }, [user?.id]);
 
+  const pendingBidsCount = bids.filter((b) => b.status === "pending").length;
+  const unreadNotifsCount = notifications.filter((n) => !n.read).length;
+  const NAV_ITEMS = buildNavItems(pendingBidsCount, unreadNotifsCount);
+
   const renderSection = () => {
     switch (active) {
-      case "dashboard":      return <DashboardHome user={user} setActive={setActive} myQuestions={myQuestions} loading={loadingQuestions} />;
+      case "dashboard":      return <DashboardHome user={user} setActive={setActive} myQuestions={myQuestions} loading={loadingQuestions} bids={bids} notifications={notifications} />;
       case "post":           return <PostQuestionSection user={user} onPosted={fetchQuestions} />;
       case "my-questions":   return <MyQuestionsSection myQuestions={myQuestions} loading={loadingQuestions} />;
-      case "bids":           return <BidsSection setActive={setActive} />;
+      case "bids":           return <BidsSection bids={bids} setBids={setBids} notifications={notifications} setNotifications={setNotifications} />;
       case "payments":       return <PaymentsSection />;
       case "downloads":      return <DownloadsSection />;
-      case "notifications":  return <NotificationsSection />;
+      case "notifications":  return <NotificationsSection notifications={notifications} setNotifications={setNotifications} />;
       case "profile":        return <ProfileSection user={user} myQuestions={myQuestions} />;
-      default:               return <DashboardHome user={user} setActive={setActive} myQuestions={myQuestions} loading={loadingQuestions} />;
+      default:               return <DashboardHome user={user} setActive={setActive} myQuestions={myQuestions} loading={loadingQuestions} bids={bids} notifications={notifications} />;
     }
   };
 

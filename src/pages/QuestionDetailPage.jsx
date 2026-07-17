@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { mockTutors } from "../mockData";
 import { supabase } from "../supabase";
@@ -6,12 +6,7 @@ import GuestModal from "../components/GuestModal";
 
 
 
-const mockChat = [
-  { role: "student", text: "Hi! Can you explain the first step? I don't understand where the formula comes from.", time: "10:32 AM" },
-  { role: "tutor", text: "Of course! The quadratic formula is derived by completing the square on ax² + bx + c = 0. Let me show you the derivation step by step…", time: "10:35 AM" },
-  { role: "student", text: "Oh! I never knew it was derived that way. Makes much more sense now. What comes next?", time: "10:38 AM" },
-  { role: "tutor", text: "Great! Now let's plug in your specific example: a=2, b=-5, c=3. The discriminant b²-4ac = 25-24 = 1, so we get two real solutions…", time: "10:40 AM" },
-];
+
 
 export default function QuestionDetailPage({ user, onGuestAction }) {
   const { id } = useParams();
@@ -25,8 +20,10 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
   const [bidPrice, setBidPrice] = useState("");
   const [submittingBid, setSubmittingBid] = useState(false);
   const [chatMsg, setChatMsg] = useState("");
-  const [chatMessages, setChatMessages] = useState(mockChat);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatLoading, setChatLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const chatBottomRef = useRef(null);
 
   const fetchBids = async () => {
     setLoadingBids(true);
@@ -37,6 +34,24 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
     }
     setLoadingBids(false);
   };
+
+  const fetchMessages = async () => {
+    setChatLoading(true);
+    const { data } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('question_id', id)
+      .order('created_at', { ascending: true });
+    if (data) setChatMessages(data);
+    setChatLoading(false);
+  };
+
+  // Scroll to bottom whenever messages change
+  useEffect(() => {
+    if (chatBottomRef.current) {
+      chatBottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages]);
 
   useEffect(() => {
     const fetchQuestion = async () => {
@@ -58,9 +73,30 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
       }
       setLoading(false);
     };
+
     if (id) {
       fetchQuestion();
       fetchBids();
+      fetchMessages();
+
+      // Supabase Realtime — listen for new messages on this question
+      const channel = supabase
+        .channel(`question-chat-${id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `question_id=eq.${id}`,
+          },
+          (payload) => {
+            setChatMessages((prev) => [...prev, payload.new]);
+          }
+        )
+        .subscribe();
+
+      return () => supabase.removeChannel(channel);
     }
   }, [id]);
 
@@ -120,11 +156,22 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
     setSubmittingBid(false);
   };
 
-  const sendChat = () => {
+  const sendChat = async () => {
     if (!user) { setShowModal(true); return; }
-    if (!chatMsg.trim()) return;
-    setChatMessages((p) => [...p, { role: user.role, text: chatMsg, time: "Just now" }]);
+    const trimmed = chatMsg.trim();
+    if (!trimmed) return;
+    // Clear input optimistically for a snappy feel
     setChatMsg("");
+    const { error } = await supabase.from('messages').insert({
+      question_id: Number(id),
+      sender_id: user.id,
+      message: trimmed,
+    });
+    if (error) {
+      alert('Failed to send message: ' + error.message);
+      // Restore text so the user can retry
+      setChatMsg(trimmed);
+    }
   };
 
   const urgencyColors = { high: "var(--urgent-color)", medium: "var(--accent-warm)", low: "var(--success)" };
@@ -312,16 +359,35 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20 }}>
               Discussion Thread
             </h3>
-            {chatMessages.map((msg, i) => (
-              <div key={i}>
-                <div
-                  className={`chat-bubble ${msg.role === "student" ? "student" : "tutor"}`}
-                >
-                  {msg.text}
-                  <div className="chat-meta">{msg.time}</div>
-                </div>
+
+            {chatLoading ? (
+              <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)', fontSize: 14 }}>
+                Loading messages…
               </div>
-            ))}
+            ) : chatMessages.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)', fontStyle: 'italic', fontSize: 14 }}>
+                No messages yet — be the first to start the discussion!
+              </div>
+            ) : (
+              chatMessages.map((msg, i) => {
+                const isMine = user && msg.sender_id === user.id;
+                const formattedTime = msg.created_at
+                  ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  : '';
+                return (
+                  <div key={msg.id ?? i}>
+                    <div className={`chat-bubble ${isMine ? 'student' : 'tutor'}`}>
+                      {msg.message}
+                      <div className="chat-meta">{formattedTime}</div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+
+            {/* Invisible anchor for auto-scroll */}
+            <div ref={chatBottomRef} />
+
             <div className="chat-input-row">
               <input
                 type="text"
