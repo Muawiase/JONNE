@@ -667,28 +667,42 @@ function BidsSection({ bids, setBids, notifications, setNotifications }) {
   const accepted = bids.filter((b) => b.status === "accepted");
   const declined = bids.filter((b) => b.status === "declined");
 
-  const handleAccept = (bid) => {
-    // Update bid status
-    setBids((prev) => prev.map((b) => b.id === bid.id ? { ...b, status: "accepted" } : b));
+  const handleAccept = async (bid) => {
+    const { error } = await supabase.from('bids').update({ accepted: true }).eq('id', bid.id);
+    if (!error) {
+      // Update bid status
+      setBids((prev) => prev.map((b) => b.id === bid.id ? { ...b, status: "accepted" } : b));
 
-    // Notify student
-    const notif = {
-      id: Date.now(),
-      type: "bid_accepted",
-      icon: "",
-      color: "#4CAF50",
-      title: "Bid accepted!",
-      body: `You accepted ${bid.tutor}'s bid for "${bid.question.slice(0, 50)}...". Chat is now open!`,
-      time: "Just now",
-      read: false,
-    };
-    setNotifications((prev) => [notif, ...prev]);
+      // Notify student
+      const notif = {
+        id: Date.now(),
+        type: "bid_accepted",
+        icon: "",
+        color: "#4CAF50",
+        title: "Bid accepted!",
+        body: `You accepted ${bid.tutor}'s bid for "${bid.question.slice(0, 50)}...". Chat is now open!`,
+        time: "Just now",
+        read: false,
+      };
+      setNotifications((prev) => [notif, ...prev]);
 
-    // Persist event so TutorDashboard can react
-    saveAcceptedBidEvent(bid);
+      // Persist event so TutorDashboard can react
+      saveAcceptedBidEvent(bid);
+    } else {
+      alert("Error accepting bid: " + error.message);
+    }
   };
 
   const handleDecline = (bidId) => {
+    try {
+      const declinedIds = JSON.parse(localStorage.getItem("jonne_declined_bids") || "[]");
+      if (!declinedIds.includes(bidId)) {
+        declinedIds.push(bidId);
+        localStorage.setItem("jonne_declined_bids", JSON.stringify(declinedIds));
+      }
+    } catch (e) {
+      console.warn("localStorage decline error", e);
+    }
     setBids((prev) => prev.map((b) => b.id === bidId ? { ...b, status: "declined" } : b));
   };
 
@@ -946,7 +960,7 @@ function NotificationsSection({ notifications, setNotifications }) {
   );
 }
 
-function ProfileSection({ user, myQuestions }) {
+function ProfileSection({ user, myQuestions, bids }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     name: user.name,
@@ -978,7 +992,7 @@ function ProfileSection({ user, myQuestions }) {
           <div className="sd-profile-role"> Student</div>
           <div className="sd-profile-stats-mini">
             <div><span>{myQuestions.length}</span><span>Questions</span></div>
-            <div><span>{mockBids.length}</span><span>Bids</span></div>
+            <div><span>{bids.length}</span><span>Bids</span></div>
             <div><span>{mockDownloads.length}</span><span>Files</span></div>
           </div>
           <button className="btn btn-secondary btn-sm" style={{ marginTop: 16 }} onClick={() => setEditing(!editing)}>
@@ -1067,22 +1081,79 @@ export default function StudentDashboard({ user }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [myQuestions, setMyQuestions] = useState([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
-  const [bids, setBids] = useState(initialMockBids);
+  const [bids, setBids] = useState([]);
   const [notifications, setNotifications] = useState(mockNotifications);
 
   const fetchQuestions = async () => {
     if (!user?.id) return;
     setLoadingQuestions(true);
-    const { data, error } = await supabase.from("questions").select("*").eq("user_id", user.id).order('created_at', { ascending: false });
-    if (!error && data) {
-      const mapped = data.map(q => ({
-        ...q,
-        isPaid: q.payment !== null && q.payment > 0,
-        pricePerHour: q.payment || 0,
-        status: 'open',
-        responses: 0,
-      }));
-      setMyQuestions(mapped);
+    const { data: questionsData, error: qError } = await supabase
+      .from("questions")
+      .select("*")
+      .eq("user_id", user.id)
+      .order('created_at', { ascending: false });
+
+    if (!qError && questionsData) {
+      const questionIds = questionsData.map(q => q.id);
+      
+      let realBids = [];
+      if (questionIds.length > 0) {
+        const { data: bidsData, error: bError } = await supabase
+          .from("bids")
+          .select("*")
+          .in("question_id", questionIds)
+          .order("created_at", { ascending: false });
+        if (!bError && bidsData) {
+          realBids = bidsData;
+        }
+      }
+
+      let declinedBidIds = [];
+      try {
+        declinedBidIds = JSON.parse(localStorage.getItem("jonne_declined_bids") || "[]");
+      } catch (e) {
+        console.warn(e);
+      }
+
+      const mappedQuestions = questionsData.map(q => {
+        const numBids = realBids.filter(b => String(b.question_id) === String(q.id)).length;
+        return {
+          ...q,
+          isPaid: q.payment !== null && q.payment > 0,
+          pricePerHour: q.payment || 0,
+          status: q.status || 'open',
+          responses: numBids,
+        };
+      });
+      setMyQuestions(mappedQuestions);
+
+      const colors = ["#6C63FF", "#A29BFE", "#00CEC9", "#FF7675", "#FDCB6E", "#E84393"];
+      const mappedBids = realBids.map(b => {
+        const relatedQuestion = questionsData.find(q => String(q.id) === String(b.question_id));
+        const rateStr = b.bid_price && b.bid_price > 0 ? `$${b.bid_price}/hr` : "FREE";
+        
+        // consistent avatar color based on tutor ID
+        const codeSum = (b.tutor_id || "").split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const color = colors[codeSum % colors.length];
+
+        return {
+          id: b.id,
+          tutor: b.tutor_name || "Tutor",
+          tutorId: b.tutor_id,
+          avatar: (b.tutor_name || "T").charAt(0).toUpperCase(),
+          color: color,
+          question: relatedQuestion ? relatedQuestion.title : "Question",
+          questionId: b.question_id,
+          rate: rateStr,
+          message: b.message || "",
+          rating: 4.8,
+          reviews: 12,
+          status: b.accepted ? "accepted" : (declinedBidIds.includes(b.id) ? "declined" : "pending"),
+          submittedAt: b.created_at,
+          isVerified: true
+        };
+      });
+      setBids(mappedBids);
     }
     setLoadingQuestions(false);
   };
@@ -1104,7 +1175,7 @@ export default function StudentDashboard({ user }) {
       case "payments":       return <PaymentsSection />;
       case "downloads":      return <DownloadsSection />;
       case "notifications":  return <NotificationsSection notifications={notifications} setNotifications={setNotifications} />;
-      case "profile":        return <ProfileSection user={user} myQuestions={myQuestions} />;
+      case "profile":        return <ProfileSection user={user} myQuestions={myQuestions} bids={bids} />;
       default:               return <DashboardHome user={user} setActive={setActive} myQuestions={myQuestions} loading={loadingQuestions} bids={bids} notifications={notifications} />;
     }
   };

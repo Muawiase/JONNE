@@ -91,7 +91,24 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
             filter: `question_id=eq.${id}`,
           },
           (payload) => {
-            setChatMessages((prev) => [...prev, payload.new]);
+            setChatMessages((prev) => {
+              if (prev.some((m) => m.id === payload.new.id)) {
+                return prev;
+              }
+              const optimisticIdx = prev.findIndex(
+                (m) =>
+                  m.sender_id === payload.new.sender_id &&
+                  m.message === payload.new.message &&
+                  typeof m.id === 'string' &&
+                  m.id.startsWith('opt-')
+              );
+              if (optimisticIdx !== -1) {
+                const updated = [...prev];
+                updated[optimisticIdx] = payload.new;
+                return updated;
+              }
+              return [...prev, payload.new];
+            });
           }
         )
         .subscribe();
@@ -160,17 +177,35 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
     if (!user) { setShowModal(true); return; }
     const trimmed = chatMsg.trim();
     if (!trimmed) return;
+    
     // Clear input optimistically for a snappy feel
     setChatMsg("");
+    
+    // Generate temporary ID and message object
+    const tempId = `opt-${Date.now()}-${Math.random()}`;
+    const optimisticMsg = {
+      id: tempId,
+      question_id: Number(id),
+      sender_id: user.id,
+      message: trimmed,
+      created_at: new Date().toISOString(),
+    };
+    
+    // Optimistic update
+    setChatMessages((prev) => [...prev, optimisticMsg]);
+    
     const { error } = await supabase.from('messages').insert({
       question_id: Number(id),
       sender_id: user.id,
       message: trimmed,
     });
+    
     if (error) {
       alert('Failed to send message: ' + error.message);
       // Restore text so the user can retry
       setChatMsg(trimmed);
+      // Remove the failed optimistic message
+      setChatMessages((prev) => prev.filter((m) => m.id !== tempId));
     }
   };
 
