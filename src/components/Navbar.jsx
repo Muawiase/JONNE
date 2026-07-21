@@ -13,9 +13,13 @@ export default function Navbar({ user, onLogout }) {
   const dashboardPath = user?.role === "admin" ? "/dashboard/admin" : user?.role === "tutor" ? "/dashboard/tutor" : "/dashboard/student";
 
   const closeMobile = () => setMobileOpen(false);
+  const toggleMobile = (e) => {
+    e.stopPropagation();
+    setMobileOpen((prev) => !prev);
+  };
 
   return (
-    <nav className="navbar" style={{ position: "sticky", top: 0, zIndex: 200 }}>
+    <nav className="navbar" style={{ position: "sticky", top: 0, zIndex: 200, background: "white" }}>
       <div className="container" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", position: "relative" }}>
         <Link to="/" className="navbar-logo" onClick={closeMobile} style={{ display: "flex", alignItems: "center" }}>
           <img
@@ -79,23 +83,49 @@ export default function Navbar({ user, onLogout }) {
 
         {/* Mobile Hamburger Toggle */}
         <button
+          type="button"
           className="hamburger-btn"
-          onClick={() => setMobileOpen(!mobileOpen)}
+          onClick={toggleMobile}
           style={{
             display: "none",
             background: "none",
             fontSize: "24px",
             border: "none",
             cursor: "pointer",
-            color: "var(--text-primary)"
+            color: "var(--text-primary)",
+            padding: "8px",
+            minWidth: "44px",
+            minHeight: "44px",
+            alignItems: "center",
+            justify-content: "center"
           }}
-          aria-label="Toggle menu"
+          aria-label="Toggle navigation menu"
+          aria-expanded={mobileOpen}
         >
           {mobileOpen ? "✕" : "☰"}
         </button>
+      </div>
 
-        {/* Mobile Menu Dropdown */}
-        {mobileOpen && (
+      {/* Mobile Backdrop & Drawer */}
+      {mobileOpen && (
+        <>
+          {/* Backdrop overlay to close menu when tapping outside */}
+          <div
+            className="mobile-menu-backdrop"
+            onClick={closeMobile}
+            style={{
+              position: "fixed",
+              top: "72px",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(0, 0, 0, 0.4)",
+              zIndex: 190,
+              backdropFilter: "blur(2px)",
+            }}
+          />
+
+          {/* Mobile Menu Dropdown */}
           <div
             className="mobile-menu"
             style={{
@@ -103,28 +133,45 @@ export default function Navbar({ user, onLogout }) {
               top: "72px",
               left: 0,
               right: 0,
+              width: "100%",
               background: "white",
               borderBottom: "1px solid var(--border)",
               boxShadow: "var(--shadow-md)",
-              padding: "20px 24px",
+              padding: "20px 24px 24px",
               display: "flex",
               flexDirection: "column",
               gap: "16px",
-              zIndex: 150
+              zIndex: 200,
+              maxHeight: "calc(100vh - 72px)",
+              overflowY: "auto",
             }}
           >
-            <Link to="/browse" onClick={closeMobile} style={{ fontSize: "16px", fontWeight: 600 }}>Browse Questions</Link>
-            <Link to="/about" onClick={closeMobile} style={{ fontSize: "16px", fontWeight: 600 }}>About Us</Link>
-            <Link to="/contact" onClick={closeMobile} style={{ fontSize: "16px", fontWeight: 600 }}>Contact Us</Link>
-            
-            <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "4px 0" }} />
-
-            {user ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {/* Top Action Section: Log In & Sign Up at the top */}
+            {!user ? (
+              <div style={{ display: "flex", gap: 12, width: "100%", marginBottom: 4 }}>
+                <Link
+                  to="/login"
+                  onClick={closeMobile}
+                  className="btn btn-primary"
+                  style={{ flex: 1, justifyContent: "center", color: "white", textAlign: "center" }}
+                >
+                  Log In
+                </Link>
+                <Link
+                  to="/login"
+                  onClick={closeMobile}
+                  className="btn btn-secondary"
+                  style={{ flex: 1, justifyContent: "center", textAlign: "center" }}
+                >
+                  Sign Up
+                </Link>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 4 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div
                     className="navbar-avatar"
-                    style={{ background: user.avatarColor, width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 14, position: "relative", overflow: "hidden" }}
+                    style={{ background: user.avatarColor, width: 38, height: 38, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 14, position: "relative", overflow: "hidden" }}
                   >
                     <span style={{ position: "absolute", zIndex: 1 }}>{getInitials(user.name)}</span>
                     <img
@@ -135,18 +182,20 @@ export default function Navbar({ user, onLogout }) {
                     />
                   </div>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: "14px" }}>{user.name}</div>
+                    <div style={{ fontWeight: 700, fontSize: "15px" }}>{user.name}</div>
                     <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>{user.role === "admin" ? "Admin" : user.role === "tutor" ? "Tutor" : "Student"}</div>
                   </div>
                 </div>
-                {user.role === "student" && (
-                  <Link to="/post" onClick={closeMobile} className="btn btn-secondary" style={{ width: "100%", justifyContent: "center" }}>
-                    Post a Question
+                <div style={{ display: "flex", gap: 10 }}>
+                  {user.role === "student" && (
+                    <Link to="/post" onClick={closeMobile} className="btn btn-secondary" style={{ flex: 1, justifyContent: "center" }}>
+                      Post Question
+                    </Link>
+                  )}
+                  <Link to={dashboardPath} onClick={closeMobile} className="btn btn-primary" style={{ flex: 1, justifyContent: "center", color: "white" }}>
+                    My Dashboard
                   </Link>
-                )}
-                <Link to={dashboardPath} onClick={closeMobile} className="btn btn-primary" style={{ width: "100%", justifyContent: "center", color: "white" }}>
-                  My Dashboard
-                </Link>
+                </div>
                 <button
                   className="btn"
                   onClick={() => { closeMobile(); onLogout(); navigate("/"); }}
@@ -155,14 +204,23 @@ export default function Navbar({ user, onLogout }) {
                   Sign Out
                 </button>
               </div>
-            ) : (
-              <Link to="/login" onClick={closeMobile} className="btn btn-primary" style={{ width: "100%", justifyContent: "center", color: "white" }}>
-                Log In / Sign Up
-              </Link>
             )}
+
+            <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "0" }} />
+
+            {/* Navigation Links */}
+            <Link to="/browse" onClick={closeMobile} style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)", padding: "4px 0" }}>
+              Browse Questions
+            </Link>
+            <Link to="/about" onClick={closeMobile} style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)", padding: "4px 0" }}>
+              About Us
+            </Link>
+            <Link to="/contact" onClick={closeMobile} style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)", padding: "4px 0" }}>
+              Contact Us
+            </Link>
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       <style>{`
         @media (max-width: 768px) {
@@ -170,7 +228,7 @@ export default function Navbar({ user, onLogout }) {
             display: none !important;
           }
           .hamburger-btn {
-            display: block !important;
+            display: flex !important;
           }
         }
       `}</style>
