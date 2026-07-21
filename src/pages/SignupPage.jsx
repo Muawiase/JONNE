@@ -125,7 +125,7 @@ export default function SignupPage({ onLogin, user, modal = false }) {
 
           <div className="form-group">
             <label className="form-label">I am a…</label>
-            <div className="role-selector" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+            <div className="role-selector">
               <button
                 type="button"
                 className={`role-btn ${role === "student" ? "active" : ""}`}

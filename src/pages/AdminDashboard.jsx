@@ -1164,7 +1164,7 @@ export default function AdminDashboard({ user }) {
               {/* Form Settings */}
               <div className="sd-widget" style={{ padding: 30 }}>
                 <form onSubmit={handleSaveSettings}>
-                  <div className="sd-stats-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                  <div className="admin-form-row" style={{ gap: 20 }}>
                     <div className="admin-input-group">
                       <label className="admin-label">Platform Name</label>
                       <input
@@ -1187,7 +1187,7 @@ export default function AdminDashboard({ user }) {
                     </div>
                   </div>
 
-                  <div className="sd-stats-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                  <div className="admin-form-row" style={{ gap: 20 }}>
                     <div className="admin-input-group">
                       <label className="admin-label">Support Helpdesk Email</label>
                       <input

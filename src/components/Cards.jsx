@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 
 function StarRating({ rating }) {
+  const full = Math.floor(rating);
+  const empty = 5 - full;
   return (
     <span className="tutor-rating">
-      {"".repeat(Math.floor(rating))}{"".repeat(5 - Math.floor(rating))}
+      {"★".repeat(full)}{"☆".repeat(empty)}
       <span style={{ color: "var(--text-secondary)", fontWeight: 500, marginLeft: 4 }}>
         {rating.toFixed(1)}
       </span>

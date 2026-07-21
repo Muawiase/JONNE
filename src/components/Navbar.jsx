@@ -91,7 +91,7 @@ export default function Navbar({ user, onLogout }) {
           }}
           aria-label="Toggle menu"
         >
-          {mobileOpen ? "" : ""}
+          {mobileOpen ? "✕" : "☰"}
         </button>
 
         {/* Mobile Menu Dropdown */}

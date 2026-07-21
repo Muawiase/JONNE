@@ -231,7 +231,7 @@ export default function TutorProfilePage({ user, onGuestAction }) {
           <div className="card" style={{ marginTop: 20 }}>
             <div className="card-inner">
               <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16 }}> Availability</h2>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
+              <div className="tutor-availability-grid">
                 {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, i) => {
                   const available = [0, 2, 3, 5, 6].includes(i);
                   return (

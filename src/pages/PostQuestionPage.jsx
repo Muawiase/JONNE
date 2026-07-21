@@ -143,7 +143,7 @@ export default function PostQuestionPage({ user }) {
       </div>
 
       <div className="container" style={{ padding: "40px 24px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 32, alignItems: "start" }}>
+        <div className="post-question-layout">
           <div>
             {!preview ? (
               <form onSubmit={(e) => { e.preventDefault(); setPreview(true); }}>
@@ -166,7 +166,7 @@ export default function PostQuestionPage({ user }) {
                     </div>
 
                     {/* Subject + Level */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <div className="form-row-2col">
                       <div className="form-group">
                         <label className="form-label">Subject / Category *</label>
                         {subjectsLoading ? (

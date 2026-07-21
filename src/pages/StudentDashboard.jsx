@@ -825,7 +825,7 @@ function PaymentsSection() {
         <p>Manage your payment history and billing information.</p>
       </div>
 
-      <div className="sd-stats-grid" style={{ gridTemplateColumns: "repeat(3,1fr)" }}>
+      <div className="sd-stats-grid">
         {[
           { icon: "", num: `$${total}`, label: "Total Spent", color: "#4CAF50" },
           { icon: "", num: mockPayments.filter((p) => p.status === "completed").length, label: "Completed", color: "#2196F3" },
