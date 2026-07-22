@@ -4,9 +4,9 @@ const values = [
   {
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="2" y1="12" x2="22" y2="12"/>
-        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        <circle cx="12" cy="12" r="10" />
+        <line x1="2" y1="12" x2="22" y2="12" />
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
       </svg>
     ),
     title: "Accessibility First",
@@ -15,10 +15,10 @@ const values = [
   {
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-        <circle cx="9" cy="7" r="4"/>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
       </svg>
     ),
     title: "Community Trust",
@@ -27,7 +27,7 @@ const values = [
   {
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
       </svg>
     ),
     title: "Active Learning",
@@ -37,27 +37,22 @@ const values = [
 
 const team = [
   {
-    avatar: "CM",
-    name: "Dr. Clara Mercer",
-    role: "Co-Founder & CEO",
-    bio: "Former university professor and EdTech researcher. Passionate about reforming online peer learning spaces."
-  },
-  {
-    avatar: "AK",
-    name: "Amara Kone",
-    role: "Lead Engineer",
+    avatar: "KR",
+    name: "KABAJUNGU RITAH",
+    role: "SOFTWARE ENGINEER",
     bio: "Full-stack developer who loves creating sleek, fast, and accessible learning interfaces."
   },
   {
-    avatar: "DV",
-    name: "David Vance",
-    role: "Head of Tutor Relations",
-    bio: "Coordinates verification criteria and ensures our helper community has all the tools they need to tutor effectively."
+    avatar: "DJM",
+    name: "DIANA JOY MUSOKI",
+    role: "Data scientist",
+    bio: "Full-stack developer who loves creating sleek, fast, and accessible learning interfaces."
   },
+
   {
-    avatar: "LN",
-    name: "Lila Nguyen",
-    role: "Lead Product Designer",
+    avatar: "MM",
+    name: "Muawia",
+    role: "Lead Engineer",
     bio: "Focuses on micro-animations and intuitive flows to make studying feel less like a chore and more like a community hub."
   }
 ];
@@ -147,7 +142,7 @@ export default function AboutPage() {
       {/*  THE TEAM  */}
       <section className="team-section">
         <div className="container">
-          <h2 className="section-title">Meet the Hive Team</h2>
+          <h2 className="section-title">Meet the JONNE Team</h2>
           <p className="section-sub">The creators, educators, and coders behind the JONNE prototype.</p>
           <div className="team-grid">
             {team.map((t, idx) => (
@@ -170,7 +165,7 @@ export default function AboutPage() {
             Join our tutoring team today and help students worldwide get unstuck, while earning at your own rate.
           </p>
           <Link to="/login" className="btn" style={{ background: "white", color: "var(--primary)", fontWeight: 700 }}>
-            Join the Hive Today
+            Join JONNE Today
           </Link>
         </div>
       </section>
