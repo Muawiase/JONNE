@@ -145,7 +145,7 @@ export default function TutorProfilePage({ user, onGuestAction }) {
             className="card"
             style={{
               marginTop: 20,
-              background: "linear-gradient(135deg, var(--free-color), #00cec9)",
+              background: "linear-gradient(135deg, var(--free-color), #38BDF8)",
               color: "white",
               padding: "24px",
             }}
