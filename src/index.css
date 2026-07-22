@@ -10,8 +10,8 @@
   --accent-warm: #F59E0B;      /* Vibrant Amber ratings */
   --success: #10B981;          /* Emerald Green */
   --success-light: #ECFDF5;    /* Emerald Tint surface */
-  --free-color: #059669;       /* Emerald 600 - Free Help Badge */
-  --free-bg: #D1FAE5;          /* Emerald 100 */
+  --free-color: #2563EB;       /* Blue 600 - Free Help Badge */
+  --free-bg: #DBEAFE;          /* Blue 100 */
   --paid-color: #4F46E5;       /* Indigo 600 - Paid Help Badge */
   --paid-bg: #E0E7FF;          /* Indigo 100 */
   --urgent-color: #E11D48;     /* Rose 600 - Urgent Badge */
@@ -400,7 +400,7 @@ textarea.form-input { resize: vertical; min-height: 120px; line-height: 1.6; }
 .status-solved { background: var(--success-light); color: var(--free-color); }
 .earnings-highlight { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; border-radius: var(--radius-md); padding: 28px; display: flex; align-items: center; gap: 20px; }
 .earnings-amount { font-size: 40px; font-weight: 900; }
-.free-impact { background: linear-gradient(135deg, var(--free-color), #00cec9); color: white; border-radius: var(--radius-md); padding: 28px; display: flex; align-items: center; gap: 20px; }
+.free-impact { background: linear-gradient(135deg, var(--free-color), #38BDF8); color: white; border-radius: var(--radius-md); padding: 28px; display: flex; align-items: center; gap: 20px; }
 
 /* ─── PROFILE PAGE ───────────────────────────────────────────── */
 .profile-layout { display: grid; grid-template-columns: 360px 1fr; gap: 32px; padding: 40px 0; align-items: start; }
