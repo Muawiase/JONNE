@@ -1111,9 +1111,25 @@ export default function TutorDashboard({ user }) {
   });
 
   // Action: Add Bid from Browse Page
-  const handleAddBid = (newBidData) => {
+  const handleAddBid = async (newBidData) => {
+    const { data, error } = await supabase.from('bids').insert({
+      question_id: Number(newBidData.questionId),
+      tutor_id: user.id,
+      tutor_name: user.name,
+      bid_price: Number(newBidData.bidPrice),
+      message: newBidData.message,
+    }).select();
+
+    if (error) {
+      alert("Error submitting bid: " + error.message);
+      return;
+    }
+
+    const insertedBid = data && data[0] ? data[0] : null;
+    const dbBidId = insertedBid ? insertedBid.id : Date.now();
+
     const newBidObj = {
-      id: Date.now(),
+      id: dbBidId,
       questionId: newBidData.questionId,
       questionTitle: newBidData.questionTitle,
       bidPrice: newBidData.bidPrice,
@@ -1192,13 +1208,33 @@ export default function TutorDashboard({ user }) {
   }, [handleBidAcceptedByStudent]);
 
   // Action: Withdraw / Cancel Bid
-  const handleCancelBid = (bidId) => {
+  const handleCancelBid = async (bidId) => {
+    const { error } = await supabase
+      .from('bids')
+      .delete()
+      .eq('id', bidId);
+
+    if (error) {
+      alert("Error canceling bid: " + error.message);
+      return;
+    }
+
     const updated = bids.filter((b) => b.id !== bidId);
     updateBids(updated);
   };
 
   // Action: Edit Bid
-  const handleEditBid = (bidId, newPrice, newMsg) => {
+  const handleEditBid = async (bidId, newPrice, newMsg) => {
+    const { error } = await supabase
+      .from('bids')
+      .update({ bid_price: Number(newPrice), message: newMsg })
+      .eq('id', bidId);
+
+    if (error) {
+      alert("Error editing bid: " + error.message);
+      return;
+    }
+
     const updated = bids.map((b) =>
       b.id === bidId ? { ...b, bidPrice: newPrice, message: newMsg } : b
     );

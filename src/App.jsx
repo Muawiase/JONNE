@@ -19,7 +19,6 @@ import FAQPage from "./pages/FAQPage";
 import ContactPage from "./pages/ContactPage";
 import Footer from "./components/Footer";
 import { supabase } from "./supabase";
-
 export default function App() {
   const [user, setUser] = useState(null); // null = guest
   const [showGuestModal, setShowGuestModal] = useState(false);

@@ -105,6 +105,14 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
   const [bidPrice, setBidPrice]       = useState("");
   const [submittingBid, setSubmittingBid] = useState(false);
 
+  // ── payments ──
+  const [payments, setPayments]                     = useState([]);
+  const [showPaymentModal, setShowPaymentModal]     = useState(false);
+  const [paymentMethod, setPaymentMethod]           = useState("CARD");
+  const [initiatingPayment, setInitiatingPayment]   = useState(false);
+  const [paymentError, setPaymentError]             = useState("");
+  const [paymentSuccess, setPaymentSuccess]         = useState(false);
+
   // ── chat ──
   const [chatMsg, setChatMsg]           = useState("");
   const [chatMessages, setChatMessages] = useState([]);
@@ -158,6 +166,14 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
     setChatLoading(false);
   };
 
+  const fetchPayments = async () => {
+    const { data } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('question_id', id);
+    if (data) setPayments(data);
+  };
+
   // ─── SCROLL TO BOTTOM ──────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -194,6 +210,7 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
       fetchQuestion();
       fetchBids();
       fetchMessages();
+      fetchPayments();
 
       // Supabase Realtime — listen for new messages on this question
       const channel = supabase
@@ -247,13 +264,90 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
     else alert("Error accepting bid.");
   };
 
+  const loadFlutterwaveScript = () => {
+    return new Promise((resolve) => {
+      if (window.FlutterwaveCheckout) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://checkout.flutterwave.com/v3.js";
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handlePay = async () => {
+    setInitiatingPayment(true);
+    setPaymentError("");
+    
+    const acceptedBid = bids.find(b => b.accepted);
+    if (!acceptedBid) {
+      setPaymentError("No accepted bid found.");
+      setInitiatingPayment(false);
+      return;
+    }
+
+    const txRef = `tx-mock-${id}-${acceptedBid.tutor_id}-${Date.now()}`;
+
+    // Simulate network delay for the payment gateway
+    setTimeout(async () => {
+      try {
+        // Save mock payment record to database
+        const { data: newPayment, error: insertErr } = await supabase
+          .from('payments')
+          .insert({
+            question_id: Number(id),
+            student_id: user.id,
+            tutor_id: acceptedBid.tutor_id,
+            amount: Number(acceptedBid.bid_price),
+            payment_method: paymentMethod === 'MTN' ? 'MTN Mobile Money' : 'Visa/Mastercard',
+            transaction_id: txRef,
+            status: 'Completed'
+          })
+          .select();
+          
+        if (insertErr) {
+          console.error("Supabase insert error:", insertErr);
+          throw new Error("Payment saved but UI update failed: " + insertErr.message);
+        }
+        
+        // Update question status to 'in-progress'
+        const { error: updateErr } = await supabase
+          .from('questions')
+          .update({ status: 'in-progress' })
+          .eq('id', id);
+          
+        if (updateErr) {
+          console.error("Supabase update error:", updateErr);
+        }
+        
+        // Update local state
+        if (newPayment && newPayment.length > 0) {
+          setPayments(prev => [...(prev || []), newPayment[0]]);
+        }
+        setQuestion(prev => prev ? { ...prev, status: 'in-progress' } : null);
+        setPaymentSuccess(true);
+        setShowPaymentModal(false);
+        setPaymentError("");
+      } catch (err) {
+        setPaymentError(err.message || "Failed to process simulated payment on our servers.");
+      } finally {
+        setInitiatingPayment(false);
+      }
+    }, 1500);
+  };
+
+
   const submitBid = async () => {
     if (!user) { setShowModal(true); return; }
     if (!bidMessage.trim()) return;
     setSubmittingBid(true);
     const finalPrice = question.isPaid ? parseFloat(bidPrice || 0) : 0;
     const { error } = await supabase.from('bids').insert({
-      question_id: id,
+      question_id: Number(id),
       tutor_id: user.id,
       tutor_name: user.name,
       bid_price: finalPrice,
@@ -502,6 +596,10 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
 
   // ─── DERIVED ───────────────────────────────────────────────────────────────
 
+  const acceptedBid = bids.find(b => b.accepted);
+  const isPaymentRequired = question?.isPaid && acceptedBid && acceptedBid.bid_price > 0;
+  const isPaid = payments && payments.some(p => p.status === 'Completed');
+
   const isBusy        = uploading || isRecording;
   const canSend       = !isBusy && (chatMsg.trim() || selectedFile || voiceBlob);
   const urgencyColors = { high: "var(--urgent-color)", medium: "var(--accent-warm)", low: "var(--success)" };
@@ -609,9 +707,23 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
                     </div>
                     <p className="helper-message">"{bid.message}"</p>
                   </div>
-                  <div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
                     {isAccepted ? (
-                      <span className="badge badge-free" style={{ padding: "8px 14px", background: "var(--success-light)", color: "var(--success)" }}>Accepted</span>
+                      <>
+                        <span className="badge badge-free" style={{ padding: "8px 14px", background: "var(--success-light)", color: "var(--success)" }}>Accepted</span>
+                        {user?.id === question.user_id && isPaymentRequired && !isPaid && (
+                          <button
+                            className="btn btn-sm btn-primary"
+                            onClick={() => {
+                              setPaymentError("");
+                              setPaymentSuccess(false);
+                              setShowPaymentModal(true);
+                            }}
+                          >
+                            Pay Now
+                          </button>
+                        )}
+                      </>
                     ) : (
                       user?.id === question.user_id && (
                         <button className="btn btn-sm btn-success" onClick={() => handleAccept(bid.id)}>Accept</button>
@@ -759,52 +871,123 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
               disabled={!user || isBusy}
             />
 
-            <div className="chat-input-row">
-              {/* Attachment button */}
-              <button
-                className="chat-attach-btn"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={!user || isBusy || !!voiceBlob}
-                title="Attach file or image"
-                type="button"
-              >
-                📎
-              </button>
+            {paymentSuccess && (
+              <div style={{
+                background: "#e8f5e9",
+                color: "#2e7d32",
+                padding: "12px 16px",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid #a5d6a7",
+                marginBottom: 16,
+                fontWeight: 600,
+                fontSize: 14,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
+              }}>
+                <span>✓ Payment successfully processed! The tutoring session is now active.</span>
+                <button 
+                  style={{ background: "none", border: "none", color: "#2e7d32", cursor: "pointer", fontWeight: 700 }}
+                  onClick={() => setPaymentSuccess(false)}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
 
-              {/* Text input */}
-              <input
-                type="text"
-                placeholder={user ? (isRecording ? "Recording in progress…" : "Type a reply…") : "Sign in to join the discussion"}
-                value={chatMsg}
-                onChange={(e) => setChatMsg(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && !isRecording && sendChat()}
-                disabled={!user || isBusy}
-              />
-
-              {/* Mic button — only shown when NOT recording and no voice blob pending */}
-              {user && !isRecording && !voiceBlob && (
+            {isPaymentRequired && !isPaid ? (
+              <div className="chat-payment-lock-banner" style={{
+                padding: "20px",
+                background: "linear-gradient(135deg, var(--primary-light), #f0ebff)",
+                border: "1px solid var(--primary)",
+                borderRadius: "var(--radius-md)",
+                textAlign: "center",
+                margin: "16px 0",
+                boxShadow: "var(--shadow-sm)"
+              }}>
+                <span style={{ fontSize: 24, display: "block", marginBottom: 8 }}>🔒</span>
+                {user?.id === question.user_id ? (
+                  <>
+                    <h4 style={{ margin: "0 0 8px 0", color: "var(--primary)", fontSize: 16 }}>Payment Required</h4>
+                    <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 16, lineHeight: 1.5 }}>
+                      Please pay the agreed rate of <strong>${acceptedBid?.bid_price}/hr</strong> to activate this discussion session and allow the tutor to start working.
+                    </p>
+                    <button
+                      className="btn btn-primary"
+                      style={{ margin: "0 auto" }}
+                      onClick={() => {
+                        setPaymentError("");
+                        setPaymentSuccess(false);
+                        setShowPaymentModal(true);
+                      }}
+                    >
+                      Pay Now (${acceptedBid?.bid_price})
+                    </button>
+                  </>
+                ) : user?.id === acceptedBid?.tutor_id ? (
+                  <>
+                    <h4 style={{ margin: "0 0 8px 0", color: "var(--primary)", fontSize: 16 }}>Awaiting Payment</h4>
+                    <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>
+                      Waiting for the student to complete payment. You will be able to start chatting and submit your work as soon as the transaction is completed.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h4 style={{ margin: "0 0 8px 0", color: "var(--text-secondary)", fontSize: 16 }}>Session Locked</h4>
+                    <p style={{ fontSize: 14, color: "var(--text-muted)", margin: 0 }}>
+                      This tutoring discussion is locked pending payment by the student.
+                    </p>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="chat-input-row">
+                {/* Attachment button */}
                 <button
-                  className="chat-mic-btn"
-                  onClick={startRecording}
-                  disabled={isBusy || !micSupported}
-                  title={micSupported ? "Record voice message" : "Voice recording not supported in this browser"}
+                  className="chat-attach-btn"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={!user || isBusy || !!voiceBlob}
+                  title="Attach file or image"
                   type="button"
                 >
-                  🎙️
+                  📎
                 </button>
-              )}
 
-              {/* Send button — hidden while recording */}
-              {!isRecording && (
-                <button
-                  onClick={sendChat}
-                  disabled={!canSend}
-                  type="button"
-                >
-                  {uploading ? '…' : 'Send →'}
-                </button>
-              )}
-            </div>
+                {/* Text input */}
+                <input
+                  type="text"
+                  placeholder={user ? (isRecording ? "Recording in progress…" : "Type a reply…") : "Sign in to join the discussion"}
+                  value={chatMsg}
+                  onChange={(e) => setChatMsg(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && !isRecording && sendChat()}
+                  disabled={!user || isBusy}
+                />
+
+                {/* Mic button — only shown when NOT recording and no voice blob pending */}
+                {user && !isRecording && !voiceBlob && (
+                  <button
+                    className="chat-mic-btn"
+                    onClick={startRecording}
+                    disabled={isBusy || !micSupported}
+                    title={micSupported ? "Record voice message" : "Voice recording not supported in this browser"}
+                    type="button"
+                  >
+                    🎙️
+                  </button>
+                )}
+
+                {/* Send button — hidden while recording */}
+                {!isRecording && (
+                  <button
+                    onClick={sendChat}
+                    disabled={!canSend}
+                    type="button"
+                  >
+                    {uploading ? '…' : 'Send →'}
+                  </button>
+                )}
+              </div>
+            )}
 
             {!user && (
               <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 8, textAlign: "center" }}>
@@ -869,6 +1052,128 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
           )}
         </div>
       </div>
+
+      {/* ─── PAYMENT OPTIONS MODAL ─── */}
+      {showPaymentModal && acceptedBid && (
+        <div className="modal-overlay" style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          backdropFilter: "blur(4px)"
+        }}>
+          <div className="card" style={{
+            width: "90%",
+            maxWidth: 420,
+            padding: 24,
+            background: "white",
+            borderRadius: "var(--radius-md)",
+            boxShadow: "var(--shadow-lg)",
+            boxSizing: "border-box"
+          }}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Select Payment Method</h3>
+            <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 20 }}>
+              Choose how you want to pay the tutoring fee of <strong>${acceptedBid.bid_price}</strong>.
+            </p>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
+              <label style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: 14,
+                border: `2px solid ${paymentMethod === 'MTN' ? 'var(--primary)' : 'var(--border)'}`,
+                borderRadius: "var(--radius-sm)",
+                cursor: "pointer",
+                background: paymentMethod === 'MTN' ? 'var(--primary-light)' : 'transparent',
+                transition: "all 0.2s"
+              }}>
+                <input
+                  type="radio"
+                  name="payment_method"
+                  checked={paymentMethod === 'MTN'}
+                  onChange={() => setPaymentMethod('MTN')}
+                  style={{ accentColor: "var(--primary)" }}
+                />
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 15 }}>MTN Mobile Money</div>
+                  <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
+                    Pay using MTN wallet (UGX {(acceptedBid.bid_price * 3700).toLocaleString()})
+                  </div>
+                </div>
+              </label>
+
+              <label style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: 14,
+                border: `2px solid ${paymentMethod === 'CARD' ? 'var(--primary)' : 'var(--border)'}`,
+                borderRadius: "var(--radius-sm)",
+                cursor: "pointer",
+                background: paymentMethod === 'CARD' ? 'var(--primary-light)' : 'transparent',
+                transition: "all 0.2s"
+              }}>
+                <input
+                  type="radio"
+                  name="payment_method"
+                  checked={paymentMethod === 'CARD'}
+                  onChange={() => setPaymentMethod('CARD')}
+                  style={{ accentColor: "var(--primary)" }}
+                />
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 15 }}>Visa / Mastercard</div>
+                  <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
+                    Pay securely with credit or debit card (USD {acceptedBid.bid_price})
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            {paymentError && (
+              <div style={{
+                color: "#c62828",
+                fontSize: 13,
+                marginBottom: 16,
+                padding: "10px 14px",
+                background: "#ffebee",
+                border: "1px solid #ef9a9a",
+                borderRadius: "var(--radius-sm)",
+                textAlign: "left",
+                lineHeight: 1.4
+              }}>
+                <strong>Error: </strong> {paymentError}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setPaymentError("");
+                }}
+                disabled={initiatingPayment}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handlePay}
+                disabled={initiatingPayment || !paymentMethod}
+              >
+                {initiatingPayment ? "Processing..." : "Proceed to Pay"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
