@@ -17,6 +17,7 @@ import { mockUsers } from "./mockData";
 import AboutPage from "./pages/AboutPage";
 import FAQPage from "./pages/FAQPage";
 import ContactPage from "./pages/ContactPage";
+import WellnessCenterPage from "./pages/WellnessCenterPage";
 import Footer from "./components/Footer";
 import { supabase } from "./supabase";
 export default function App() {
@@ -178,6 +179,7 @@ export default function App() {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/faq" element={<FAQPage />} />
         <Route path="/contact" element={<ContactPage />} />
+        <Route path="/wellness" element={<WellnessCenterPage />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       {!isAuthOverlay && <Footer />}

@@ -49,6 +49,7 @@ export default function Footer() {
             <ul className="footer-links">
               <li><Link to="/about">About Us</Link></li>
               <li><Link to="/contact">Contact Support</Link></li>
+              <li><Link to="/wellness">Student Wellness</Link></li>
               <li><a href="#careers">Careers</a></li>
             </ul>
           </div>

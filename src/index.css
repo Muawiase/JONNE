@@ -2545,4 +2545,416 @@ textarea.form-input { resize: vertical; min-height: 120px; line-height: 1.6; }
   }
 }
 
+/* ─── STUDENT WELLNESS CENTER ────────────────────────────────── */
+.wellness-hero {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.03) 0%, rgba(6, 182, 212, 0.05) 50%, rgba(16, 185, 129, 0.03) 100%);
+  padding: 90px 0 70px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+.wellness-hero::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: -10%;
+  width: 50%;
+  height: 140%;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.06) 0%, rgba(255, 255, 255, 0) 70%);
+  z-index: 0;
+  pointer-events: none;
+}
+.wellness-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -20%;
+  right: -10%;
+  width: 50%;
+  height: 140%;
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.05) 0%, rgba(255, 255, 255, 0) 70%);
+  z-index: 0;
+  pointer-events: none;
+}
+.wellness-hero .container {
+  position: relative;
+  z-index: 1;
+}
+.wellness-hero h1 {
+  font-size: 46px;
+  font-weight: 900;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+.wellness-hero h1 span {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.wellness-hero p {
+  font-size: 19px;
+  color: var(--text-secondary);
+  max-width: 660px;
+  margin: 0 auto 32px;
+  line-height: 1.6;
+}
+.wellness-hero-illustration {
+  margin: 40px auto 0;
+  max-width: 280px;
+  opacity: 0.95;
+  filter: drop-shadow(0 10px 20px rgba(79, 70, 229, 0.08));
+}
+
+.wellness-section {
+  padding: 80px 0;
+}
+.wellness-section-title {
+  text-align: center;
+  font-size: 32px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+.wellness-section-subtitle {
+  text-align: center;
+  font-size: 16px;
+  color: var(--text-muted);
+  max-width: 600px;
+  margin: 0 auto 48px;
+  line-height: 1.6;
+}
+
+.wellness-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 24px;
+}
+.wellness-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--border);
+  padding: 32px 24px;
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.wellness-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(79, 70, 229, 0.3);
+  box-shadow: var(--shadow-lg);
+}
+.wellness-card-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: var(--primary-light);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  transition: all 0.25s;
+}
+.wellness-card:hover .wellness-card-icon {
+  background: var(--primary);
+  color: white;
+  transform: scale(1.08);
+}
+.wellness-card-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+.wellness-card-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 24px;
+  flex-grow: 1;
+}
+.wellness-card-btn {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary);
+  background: transparent;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: transform 0.2s, color 0.2s;
+}
+.wellness-card-btn:hover {
+  color: var(--primary-dark);
+  transform: translateX(3px);
+}
+
+.wellness-tips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+.wellness-tip-card {
+  background: white;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  padding: 24px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  transition: all 0.2s;
+}
+.wellness-tip-card:hover {
+  border-color: var(--success);
+  background: var(--success-light);
+  transform: translateY(-2px);
+}
+.wellness-tip-number {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--success);
+  background: var(--success-light);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.wellness-tip-card:hover .wellness-tip-number {
+  background: var(--success);
+  color: white;
+}
+.wellness-tip-content h4 {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+}
+.wellness-tip-content p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.emergency-banner-wrap {
+  margin: 40px auto;
+  max-width: 1000px;
+}
+.emergency-banner {
+  background: linear-gradient(135deg, #FFF5F5 0%, #FFF0F0 100%);
+  border: 1.5px dashed #FEB2B2;
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+.emergency-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #FED7D7;
+  color: #E53E3E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(229, 62, 62, 0.15);
+}
+.emergency-content {
+  flex-grow: 1;
+}
+.emergency-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #C53030;
+  margin-bottom: 8px;
+}
+.emergency-desc {
+  font-size: 15px;
+  color: #742A2A;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+.emergency-hotlines {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.emergency-hotline-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #9B2C2C;
+}
+
+.breathing-widget {
+  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  height: 100%;
+}
+.breathing-circle-outer {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: rgba(79, 70, 229, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 24px 0;
+  position: relative;
+}
+.breathing-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: var(--shadow-md);
+  z-index: 2;
+  transition: background-color 0.4s;
+}
+.breathing-circle-active {
+  animation: breatheAnimation 10s infinite ease-in-out;
+}
+.breathing-instruction {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-top: 8px;
+  min-height: 24px;
+}
+@keyframes breatheAnimation {
+  0%, 100% {
+    transform: scale(1);
+    background-color: var(--primary);
+  }
+  40% {
+    transform: scale(1.5);
+    background-color: var(--accent);
+  }
+  70% {
+    transform: scale(1.5);
+    background-color: var(--accent);
+  }
+}
+
+.wellness-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.25s ease-out;
+}
+.wellness-modal {
+  background: white;
+  border-radius: var(--radius-lg);
+  max-width: 500px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  animation: scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.wellness-modal-header {
+  padding: 24px 24px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+.wellness-modal-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.wellness-modal-close {
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 20px;
+  border: none;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.wellness-modal-close:hover {
+  background: var(--bg-main);
+  color: var(--text-primary);
+}
+.wellness-modal-body {
+  padding: 24px;
+}
+.wellness-modal-points {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.wellness-modal-point {
+  display: flex;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.wellness-modal-point-bullet {
+  color: var(--success);
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scaleUp {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  .wellness-hero h1 { font-size: 34px; }
+  .wellness-hero p { font-size: 16px; }
+  .emergency-banner { flex-direction: column; text-align: center; }
+  .emergency-hotlines { justify-content: center; }
+}
+
+
 

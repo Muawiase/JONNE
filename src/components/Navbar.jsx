@@ -39,6 +39,7 @@ export default function Navbar({ user, onLogout }) {
           <Link to="/browse" style={{ color: "var(--text-secondary)", fontWeight: 500 }}>Browse</Link>
           <Link to="/about" style={{ color: "var(--text-secondary)", fontWeight: 500 }}>About</Link>
           <Link to="/contact" style={{ color: "var(--text-secondary)", fontWeight: 500 }}>Contact</Link>
+          <Link to="/wellness" style={{ color: "var(--text-secondary)", fontWeight: 500 }}>Wellness</Link>
 
           <span style={{ width: 1, height: 20, background: "var(--border)", margin: "0 4px" }}></span>
 
@@ -217,6 +218,9 @@ export default function Navbar({ user, onLogout }) {
             </Link>
             <Link to="/contact" onClick={closeMobile} style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)", padding: "4px 0" }}>
               Contact Us
+            </Link>
+            <Link to="/wellness" onClick={closeMobile} style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)", padding: "4px 0" }}>
+              Wellness Center
             </Link>
           </div>
         </>
