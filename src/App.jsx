@@ -51,6 +51,17 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Loads cached profile overrides from localStorage if available
+  function getStoredProfile(userId) {
+    if (!userId) return {};
+    try {
+      const stored = localStorage.getItem(`jonne_user_profile_${userId}`);
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  }
+
   // Builds a user object that includes the real Supabase UUID (.id) plus
   // the role/name from metadata and a mock-compatible shape for the UI.
   function mergeSupabaseUser(supabaseUser) {
@@ -58,6 +69,7 @@ export default function App() {
     const role = meta.role || "student";
     const email = supabaseUser.email || "";
     const name = meta.full_name || meta.name || email.split("@")[0];
+    const localProfile = getStoredProfile(supabaseUser.id);
 
     // Start from the mock user shape so the rest of the UI keeps working,
     // then overwrite id/email/name/role with real values.
@@ -74,8 +86,49 @@ export default function App() {
       email,
       name,
       role,
+      avatar_url: meta.avatar_url || meta.avatar || localProfile.avatar_url || baseUser.avatar_url || "",
+      bio: meta.bio || localProfile.bio || baseUser.bio || "",
+      school: meta.school || localProfile.school || baseUser.school || "",
+      grade: meta.grade || localProfile.grade || baseUser.grade || "",
+      phone: meta.phone || localProfile.phone || "",
+      responseTime: meta.responseTime || localProfile.responseTime || baseUser.responseTime || "Under 1 hour",
+      rateMin: meta.rateMin !== undefined ? meta.rateMin : (localProfile.rateMin !== undefined ? localProfile.rateMin : (baseUser.rateMin || 15)),
+      rateMax: meta.rateMax !== undefined ? meta.rateMax : (localProfile.rateMax !== undefined ? localProfile.rateMax : (baseUser.rateMax || 45)),
+      subjects: meta.subjects || localProfile.subjects || baseUser.subjects || ["Mathematics", "Physics"],
+      ...localProfile,
     });
   }
+
+  const updateProfile = async (updatedFields) => {
+    if (!user) return;
+    const nextUser = { ...user, ...updatedFields };
+    setUser(nextUser);
+
+    // Save in localStorage
+    try {
+      const storageKey = `jonne_user_profile_${user.id || 'guest'}`;
+      const existing = getStoredProfile(user.id || 'guest');
+      localStorage.setItem(storageKey, JSON.stringify({ ...existing, ...updatedFields }));
+    } catch (e) {
+      console.warn("Could not save profile to localStorage", e);
+    }
+
+    // Save in Supabase User Metadata if session exists
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session?.user) {
+        await supabase.auth.updateUser({
+          data: {
+            ...updatedFields,
+            full_name: updatedFields.name || updatedFields.full_name || user.name,
+            avatar_url: updatedFields.avatar_url || updatedFields.photo || user.avatar_url,
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("Could not update Supabase user metadata", e);
+    }
+  };
 
   const login = (role, email, fullName, supabaseUser) => {
     // If we have the real Supabase user object, use it to get the correct UUID.
@@ -166,15 +219,15 @@ export default function App() {
         <Route path="/tutor/:id" element={<TutorProfilePage user={user} onGuestAction={() => setShowGuestModal(true)} />} />
         <Route
           path="/dashboard/student"
-          element={user?.role === "student" ? <StudentDashboard user={user} /> : <Navigate to="/login" />}
+          element={user?.role === "student" ? <StudentDashboard user={user} onUpdateProfile={updateProfile} /> : <Navigate to="/login" />}
         />
         <Route
           path="/dashboard/tutor"
-          element={user?.role === "tutor" ? <TutorDashboard user={user} /> : <Navigate to="/login" />}
+          element={user?.role === "tutor" ? <TutorDashboard user={user} onUpdateProfile={updateProfile} /> : <Navigate to="/login" />}
         />
         <Route
           path="/dashboard/admin"
-          element={user?.role === "admin" ? <AdminDashboard user={user} /> : <Navigate to="/login" />}
+          element={user?.role === "admin" ? <AdminDashboard user={user} onUpdateProfile={updateProfile} /> : <Navigate to="/login" />}
         />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/faq" element={<FAQPage />} />

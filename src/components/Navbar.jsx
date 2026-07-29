@@ -60,7 +60,7 @@ export default function Navbar({ user, onLogout }) {
                 >
                   <span style={{ position: "absolute", zIndex: 1 }}>{getInitials(user.name)}</span>
                   <img
-                    src={`https://unavatar.io/${user.email}`}
+                    src={user.avatar_url || user.photo || user.avatar || `https://unavatar.io/${user.email}`}
                     alt={user.name}
                     style={{ width: '100%', height: '100%', objectFit: 'cover', position: "absolute", zIndex: 2, top: 0, left: 0 }}
                     onError={(e) => { e.target.style.display = 'none'; }}
@@ -176,7 +176,7 @@ export default function Navbar({ user, onLogout }) {
                   >
                     <span style={{ position: "absolute", zIndex: 1 }}>{getInitials(user.name)}</span>
                     <img
-                      src={`https://unavatar.io/${user.email}`}
+                      src={user.avatar_url || user.photo || user.avatar || `https://unavatar.io/${user.email}`}
                       alt={user.name}
                       style={{ width: '100%', height: '100%', objectFit: 'cover', position: "absolute", zIndex: 2, top: 0, left: 0 }}
                       onError={(e) => { e.target.style.display = 'none'; }}

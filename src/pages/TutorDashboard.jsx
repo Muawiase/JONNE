@@ -855,10 +855,57 @@ function NotificationsSection({ notifications, onMarkAllRead, onMarkSingleRead }
 }
 
 // 8. PROFILE
-function ProfileSection({ user, profile, setProfile }) {
+function ProfileSection({ user, profile, setProfile, onUpdateProfile }) {
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ ...profile });
+  const [toast, setToast] = useState("");
+  const [form, setForm] = useState({
+    ...profile,
+    avatar_url: profile.avatar_url || user?.avatar_url || user?.photo || "",
+  });
   const [fileUploaded, setFileUploaded] = useState(false);
+
+  useEffect(() => {
+    setForm({
+      ...profile,
+      avatar_url: profile.avatar_url || user?.avatar_url || user?.photo || "",
+    });
+  }, [profile, user]);
+
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image size should be less than 5MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result;
+      const updated = { ...form, avatar_url: base64String };
+      setForm(updated);
+      setProfile(updated);
+      if (onUpdateProfile) {
+        onUpdateProfile({ avatar_url: base64String });
+      }
+      showToast("Profile photo updated successfully!");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = () => {
+    const updated = { ...form, avatar_url: "" };
+    setForm(updated);
+    setProfile(updated);
+    if (onUpdateProfile) {
+      onUpdateProfile({ avatar_url: "" });
+    }
+    showToast("Profile photo removed.");
+  };
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 3500);
+  };
 
   const handleToggleSubject = (sub) => {
     if (form.subjects.includes(sub)) {
@@ -870,41 +917,162 @@ function ProfileSection({ user, profile, setProfile }) {
 
   const handleSave = () => {
     setProfile({ ...form });
+    if (onUpdateProfile) {
+      onUpdateProfile(form);
+    }
     setEditing(false);
+    showToast("Tutor profile updated successfully!");
   };
 
+  const avatarSrc = form.avatar_url || profile.avatar_url || user?.avatar_url || user?.photo || user?.avatar || (profile.email ? `https://unavatar.io/${profile.email}` : "");
+
   return (
-    <div className="sd-section">
+    <div className="sd-section" style={{ position: "relative" }}>
+      {toast && (
+        <div style={{
+          position: "fixed",
+          top: 24,
+          right: 24,
+          zIndex: 9999,
+          background: "#10B981",
+          color: "white",
+          padding: "12px 20px",
+          borderRadius: "8px",
+          fontWeight: 600,
+          boxShadow: "0 10px 25px rgba(16, 185, 129, 0.3)",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}>
+          ✓ {toast}
+        </div>
+      )}
+
       <div className="sd-page-header">
         <h1> My Profile</h1>
-        <p>Edit your public tutor bio, rate structures, and subject expertise fields.</p>
+        <p>Edit your public tutor bio, rate structures, subject expertise fields, and profile photo.</p>
       </div>
 
       <div className="sd-profile-layout">
         {/* Avatar Sidebar */}
-        <div className="sd-profile-avatar-card">
-          <div className="sd-profile-avatar" style={{ background: "linear-gradient(135deg, #FF6584, #FF9F43)", color: "white", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ position: "absolute", zIndex: 1 }}>{(profile.name || "M").charAt(0).toUpperCase()}</span>
-            <img
-              src={`https://unavatar.io/${profile.email}`}
-              alt={profile.name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', position: "absolute", zIndex: 2, top: 0, left: 0 }}
-              onError={(e) => { e.target.style.display = 'none'; }}
+        <div className="sd-profile-avatar-card" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <div
+            className="sd-profile-avatar"
+            style={{
+              background: "linear-gradient(135deg, #FF6584, #FF9F43)",
+              color: "white",
+              position: "relative",
+              overflow: "hidden",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 110,
+              height: 110,
+              borderRadius: "50%",
+              boxShadow: "0 6px 16px rgba(0,0,0,0.12)",
+              cursor: "pointer",
+            }}
+          >
+            <span style={{ position: "absolute", zIndex: 1, fontSize: 36, fontWeight: 700 }}>
+              {(form.name || profile.name || "M").charAt(0).toUpperCase()}
+            </span>
+            {avatarSrc && (
+              <img
+                src={avatarSrc}
+                alt={form.name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', position: "absolute", zIndex: 2, top: 0, left: 0 }}
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+            )}
+            <label
+              htmlFor="tutor-photo-input"
+              style={{
+                position: "absolute",
+                zIndex: 3,
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                background: "rgba(0, 0, 0, 0.45)",
+                color: "white",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: 0,
+                transition: "opacity 0.2s ease",
+                cursor: "pointer",
+                fontSize: 12,
+                fontWeight: 600,
+                textAlign: "center",
+                padding: 4,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.opacity = 1; }}
+              onMouseLeave={(e) => { e.currentTarget.style.opacity = 0; }}
+            >
+              <span style={{ fontSize: 20 }}>📷</span>
+              Change Photo
+            </label>
+            <input
+              id="tutor-photo-input"
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handlePhotoUpload}
             />
           </div>
-          <div className="sd-profile-name">{profile.name}</div>
+
+          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+            <label htmlFor="tutor-photo-input-btn" className="btn btn-secondary btn-sm" style={{ cursor: "pointer", fontSize: 12 }}>
+              📷 Upload Photo
+            </label>
+            <input
+              id="tutor-photo-input-btn"
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handlePhotoUpload}
+            />
+            {form.avatar_url && (
+              <button
+                className="btn btn-sm"
+                style={{ background: "#FEE2E2", color: "#EF4444", border: "none", fontSize: 12 }}
+                onClick={handleRemovePhoto}
+              >
+                Remove
+              </button>
+            )}
+          </div>
+
+          <div className="sd-profile-name" style={{ marginTop: 14 }}>{form.name}</div>
           <div className="sd-profile-role"> Verified Tutor {profile.isVerified && ""}</div>
-          <div className="sd-profile-stats-mini" style={{ margin: "16px 0" }}>
+          <div className="sd-profile-stats-mini" style={{ margin: "16px 0", width: "100%" }}>
             <div><span>4.8</span><span>Rating</span></div>
             <div><span>89</span><span>Reviews</span></div>
             <div><span>31</span><span>Helped Free</span></div>
           </div>
-          <button className="btn btn-secondary btn-sm" style={{ marginTop: 8, width: "100%", justifyContent: "center" }} onClick={() => {
-            if (editing) handleSave();
-            else setEditing(true);
-          }}>
+          <button
+            className="btn btn-primary btn-sm"
+            style={{ marginTop: 8, width: "100%", justifyContent: "center" }}
+            onClick={() => {
+              if (editing) handleSave();
+              else setEditing(true);
+            }}
+          >
             {editing ? " Save Changes" : " Edit Profile"}
           </button>
+          {editing && (
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ marginTop: 8, width: "100%", justifyContent: "center" }}
+              onClick={() => {
+                setForm({ ...profile });
+                setEditing(false);
+              }}
+            >
+              Cancel
+            </button>
+          )}
         </div>
 
         {/* Form Details */}
@@ -1048,7 +1216,7 @@ function ProfileSection({ user, profile, setProfile }) {
 }
 
 //  MAIN EXPORTED COMPONENT 
-export default function TutorDashboard({ user }) {
+export default function TutorDashboard({ user, onUpdateProfile }) {
   const [active, setActive] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -1383,6 +1551,7 @@ export default function TutorDashboard({ user }) {
             user={user}
             profile={profile}
             setProfile={setProfile}
+            onUpdateProfile={onUpdateProfile}
           />
         );
       default:
@@ -1416,7 +1585,7 @@ export default function TutorDashboard({ user }) {
           <div className="sd-sidebar-avatar" style={{ background: "linear-gradient(135deg, #FF6584, #FF9F43)", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ position: "absolute", zIndex: 1 }}>{(profile.name || "M").charAt(0).toUpperCase()}</span>
             <img
-              src={`https://unavatar.io/${profile.email}`}
+              src={profile.avatar_url || user?.avatar_url || user?.photo || user?.avatar || `https://unavatar.io/${profile.email}`}
               alt={profile.name}
               style={{ width: '100%', height: '100%', objectFit: 'cover', position: "absolute", zIndex: 2, top: 0, left: 0 }}
               onError={(e) => { e.target.style.display = 'none'; }}

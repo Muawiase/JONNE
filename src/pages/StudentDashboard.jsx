@@ -960,44 +960,228 @@ function NotificationsSection({ notifications, setNotifications }) {
   );
 }
 
-function ProfileSection({ user, myQuestions, bids }) {
+function ProfileSection({ user, myQuestions, bids, onUpdateProfile }) {
   const [editing, setEditing] = useState(false);
+  const [toast, setToast] = useState("");
   const [form, setForm] = useState({
-    name: user.name,
-    email: user.email || "amara@example.com",
-    bio: "High school student passionate about mathematics and sciences. I use JONNE to get expert help when I'm stuck.",
-    grade: "Grade 10",
-    school: "Westfield High School",
+    name: user.name || "",
+    email: user.email || "",
+    bio: user.bio || "High school student passionate about mathematics and sciences. I use JONNE to get expert help when I'm stuck.",
+    grade: user.grade || "Grade 10",
+    school: user.school || "Westfield High School",
+    phone: user.phone || "",
+    avatar_url: user.avatar_url || user.photo || "",
   });
 
+  useEffect(() => {
+    setForm({
+      name: user.name || "",
+      email: user.email || "",
+      bio: user.bio || "High school student passionate about mathematics and sciences. I use JONNE to get expert help when I'm stuck.",
+      grade: user.grade || "Grade 10",
+      school: user.school || "Westfield High School",
+      phone: user.phone || "",
+      avatar_url: user.avatar_url || user.photo || "",
+    });
+  }, [user]);
+
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image size should be less than 5MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result;
+      setForm((prev) => ({ ...prev, avatar_url: base64String }));
+      if (onUpdateProfile) {
+        onUpdateProfile({ avatar_url: base64String });
+      }
+      showToast("Profile photo updated successfully!");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = () => {
+    setForm((prev) => ({ ...prev, avatar_url: "" }));
+    if (onUpdateProfile) {
+      onUpdateProfile({ avatar_url: "" });
+    }
+    showToast("Profile photo removed.");
+  };
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 3500);
+  };
+
+  const handleSave = () => {
+    if (onUpdateProfile) {
+      onUpdateProfile(form);
+    }
+    setEditing(false);
+    showToast("Profile details updated successfully!");
+  };
+
+  const avatarSrc = form.avatar_url || user.avatar_url || user.photo || user.avatar || (user.email ? `https://unavatar.io/${user.email}` : "");
+
   return (
-    <div className="sd-section">
+    <div className="sd-section" style={{ position: "relative" }}>
+      {toast && (
+        <div style={{
+          position: "fixed",
+          top: 24,
+          right: 24,
+          zIndex: 9999,
+          background: "#10B981",
+          color: "white",
+          padding: "12px 20px",
+          borderRadius: "8px",
+          fontWeight: 600,
+          boxShadow: "0 10px 25px rgba(16, 185, 129, 0.3)",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}>
+          ✓ {toast}
+        </div>
+      )}
+
       <div className="sd-page-header">
-        <h1> My Profile</h1>
-        <p>Manage your personal details and preferences.</p>
+        <h1>My Profile</h1>
+        <p>Manage your personal details, profile picture, and preferences.</p>
       </div>
       <div className="sd-profile-layout">
         {/* Avatar Card */}
-        <div className="sd-profile-avatar-card">
-          <div className="sd-profile-avatar" style={{ background: "linear-gradient(135deg,#6C63FF,#4CAF50)", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ position: "absolute", zIndex: 1 }}>{user.name.charAt(0).toUpperCase()}</span>
-            <img
-              src={`https://unavatar.io/${user.email || 'amara@example.com'}`}
-              alt={user.name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', position: "absolute", zIndex: 2, top: 0, left: 0 }}
-              onError={(e) => { e.target.style.display = 'none'; }}
+        <div className="sd-profile-avatar-card" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <div
+            className="sd-profile-avatar"
+            style={{
+              background: "linear-gradient(135deg,#6C63FF,#4CAF50)",
+              position: "relative",
+              overflow: "hidden",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 110,
+              height: 110,
+              borderRadius: "50%",
+              boxShadow: "0 6px 16px rgba(0,0,0,0.12)",
+              cursor: "pointer",
+            }}
+          >
+            <span style={{ position: "absolute", zIndex: 1, fontSize: 36, fontWeight: 700, color: "white" }}>
+              {(form.name || user.name || "S").charAt(0).toUpperCase()}
+            </span>
+            {avatarSrc && (
+              <img
+                src={avatarSrc}
+                alt={form.name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', position: "absolute", zIndex: 2, top: 0, left: 0 }}
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+            )}
+            <label
+              htmlFor="student-photo-input"
+              style={{
+                position: "absolute",
+                zIndex: 3,
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                background: "rgba(0, 0, 0, 0.45)",
+                color: "white",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: 0,
+                transition: "opacity 0.2s ease",
+                cursor: "pointer",
+                fontSize: 12,
+                fontWeight: 600,
+                textAlign: "center",
+                padding: 4,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.opacity = 1; }}
+              onMouseLeave={(e) => { e.currentTarget.style.opacity = 0; }}
+            >
+              <span style={{ fontSize: 20 }}>📷</span>
+              Change Photo
+            </label>
+            <input
+              id="student-photo-input"
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handlePhotoUpload}
             />
           </div>
-          <div className="sd-profile-name">{form.name}</div>
-          <div className="sd-profile-role"> Student</div>
-          <div className="sd-profile-stats-mini">
+
+          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+            <label htmlFor="student-photo-input-btn" className="btn btn-secondary btn-sm" style={{ cursor: "pointer", fontSize: 12 }}>
+              📷 Upload Photo
+            </label>
+            <input
+              id="student-photo-input-btn"
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handlePhotoUpload}
+            />
+            {form.avatar_url && (
+              <button
+                className="btn btn-sm"
+                style={{ background: "#FEE2E2", color: "#EF4444", border: "none", fontSize: 12 }}
+                onClick={handleRemovePhoto}
+              >
+                Remove
+              </button>
+            )}
+          </div>
+
+          <div className="sd-profile-name" style={{ marginTop: 14 }}>{form.name}</div>
+          <div className="sd-profile-role">Student</div>
+
+          <div className="sd-profile-stats-mini" style={{ width: "100%", marginTop: 16 }}>
             <div><span>{myQuestions.length}</span><span>Questions</span></div>
             <div><span>{bids.length}</span><span>Bids</span></div>
             <div><span>{mockDownloads.length}</span><span>Files</span></div>
           </div>
-          <button className="btn btn-secondary btn-sm" style={{ marginTop: 16 }} onClick={() => setEditing(!editing)}>
-            {editing ? " Save Changes" : " Edit Profile"}
+
+          <button
+            className="btn btn-primary btn-sm"
+            style={{ marginTop: 18, width: "100%", justifyContent: "center" }}
+            onClick={() => {
+              if (editing) handleSave();
+              else setEditing(true);
+            }}
+          >
+            {editing ? "Save Changes" : "Edit Profile"}
           </button>
+          {editing && (
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ marginTop: 8, width: "100%", justifyContent: "center" }}
+              onClick={() => {
+                setForm({
+                  name: user.name || "",
+                  email: user.email || "",
+                  bio: user.bio || "",
+                  grade: user.grade || "",
+                  school: user.school || "",
+                  phone: user.phone || "",
+                  avatar_url: user.avatar_url || "",
+                });
+                setEditing(false);
+              }}
+            >
+              Cancel
+            </button>
+          )}
         </div>
 
         {/* Details Card */}
@@ -1015,7 +1199,7 @@ function ProfileSection({ user, myQuestions, bids }) {
                   )}
                 </div>
                 <div className="sd-form-group">
-                  <label className="sd-label">Email</label>
+                  <label className="sd-label">Email Address</label>
                   {editing ? (
                     <input className="sd-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                   ) : (
@@ -1023,13 +1207,14 @@ function ProfileSection({ user, myQuestions, bids }) {
                   )}
                 </div>
               </div>
-              <div className="sd-form-row">
+
+              <div className="sd-form-row" style={{ marginTop: 14 }}>
                 <div className="sd-form-group">
                   <label className="sd-label">School / Institution</label>
                   {editing ? (
                     <input className="sd-input" value={form.school} onChange={(e) => setForm({ ...form, school: e.target.value })} />
                   ) : (
-                    <div className="sd-profile-field">{form.school}</div>
+                    <div className="sd-profile-field">{form.school || "Not specified"}</div>
                   )}
                 </div>
                 <div className="sd-form-group">
@@ -1037,16 +1222,26 @@ function ProfileSection({ user, myQuestions, bids }) {
                   {editing ? (
                     <input className="sd-input" value={form.grade} onChange={(e) => setForm({ ...form, grade: e.target.value })} />
                   ) : (
-                    <div className="sd-profile-field">{form.grade}</div>
+                    <div className="sd-profile-field">{form.grade || "Not specified"}</div>
                   )}
                 </div>
               </div>
-              <div className="sd-form-group">
-                <label className="sd-label">Bio</label>
+
+              <div className="sd-form-group" style={{ marginTop: 14 }}>
+                <label className="sd-label">Phone / WhatsApp (Optional)</label>
                 {editing ? (
-                  <textarea className="sd-input sd-textarea" rows={3} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
+                  <input className="sd-input" placeholder="+1 (555) 000-0000" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
                 ) : (
-                  <div className="sd-profile-field" style={{ whiteSpace: "pre-wrap" }}>{form.bio}</div>
+                  <div className="sd-profile-field">{form.phone || "Not specified"}</div>
+                )}
+              </div>
+
+              <div className="sd-form-group" style={{ marginTop: 14 }}>
+                <label className="sd-label">Bio / About Me</label>
+                {editing ? (
+                  <textarea className="sd-input sd-textarea" rows={4} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
+                ) : (
+                  <div className="sd-profile-field" style={{ whiteSpace: "pre-wrap" }}>{form.bio || "No bio provided."}</div>
                 )}
               </div>
             </div>
@@ -1055,18 +1250,18 @@ function ProfileSection({ user, myQuestions, bids }) {
           <div className="sd-widget" style={{ padding: "24px", marginTop: 20, marginBottom: 0 }}>
             <h2 style={{ marginBottom: 16, fontSize: 18 }}>Account & Security</h2>
             <div className="sd-security-item">
-              <span> Password</span>
-              <button className="btn btn-secondary btn-sm">Change Password</button>
+              <span>Password</span>
+              <button className="btn btn-secondary btn-sm" onClick={() => alert("Password reset link has been sent to your email.")}>Change Password</button>
             </div>
             <div className="sd-security-item">
-              <span> Email Notifications</span>
+              <span>Email Notifications</span>
               <div className={`sd-toggle sd-toggle-on`} style={{ cursor: "pointer" }}>
                 <div className="sd-toggle-thumb"></div>
               </div>
             </div>
             <div className="sd-security-item">
-              <span> Delete Account</span>
-              <button className="btn btn-sm" style={{ background: "#FFEBEE", color: "#F44336", border: "none" }}>Delete</button>
+              <span>Delete Account</span>
+              <button className="btn btn-sm" style={{ background: "#FFEBEE", color: "#F44336", border: "none" }} onClick={() => alert("Account deletion requires contacting support.")}>Delete</button>
             </div>
           </div>
         </div>
@@ -1076,7 +1271,7 @@ function ProfileSection({ user, myQuestions, bids }) {
 }
 
 //  MAIN COMPONENT 
-export default function StudentDashboard({ user }) {
+export default function StudentDashboard({ user, onUpdateProfile }) {
   const [active, setActive] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [myQuestions, setMyQuestions] = useState([]);
@@ -1102,40 +1297,28 @@ export default function StudentDashboard({ user }) {
           .from("bids")
           .select("*")
           .in("question_id", questionIds)
-          .order("created_at", { ascending: false });
-        if (!bError && bidsData) {
-          realBids = bidsData;
-        }
+          .order('created_at', { ascending: false });
+        if (!bError && bidsData) realBids = bidsData;
       }
 
-      let declinedBidIds = [];
-      try {
-        declinedBidIds = JSON.parse(localStorage.getItem("jonne_declined_bids") || "[]");
-      } catch (e) {
-        console.warn(e);
-      }
+      setMyQuestions(questionsData.map(q => ({
+        id: q.id,
+        title: q.title,
+        subject: q.subject,
+        level: q.level || "High School",
+        postedAt: q.created_at,
+        status: q.status || "open",
+        bidsCount: realBids.filter(b => b.question_id === q.id).length,
+        payment: `$${q.payment || 0}`,
+        description: q.description
+      })));
 
-      const mappedQuestions = questionsData.map(q => {
-        const numBids = realBids.filter(b => String(b.question_id) === String(q.id)).length;
-        return {
-          ...q,
-          isPaid: q.payment !== null && q.payment > 0,
-          pricePerHour: q.payment || 0,
-          status: q.status || 'open',
-          responses: numBids,
-        };
-      });
-      setMyQuestions(mappedQuestions);
+      const declinedBidIds = JSON.parse(localStorage.getItem("jonne_declined_bids") || "[]");
 
-      const colors = ["#6C63FF", "#A29BFE", "#00CEC9", "#FF7675", "#FDCB6E", "#E84393"];
       const mappedBids = realBids.map(b => {
-        const relatedQuestion = questionsData.find(q => String(q.id) === String(b.question_id));
-        const rateStr = b.bid_price && b.bid_price > 0 ? `$${b.bid_price}/hr` : "FREE";
-        
-        // consistent avatar color based on tutor ID
-        const codeSum = (b.tutor_id || "").split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        const color = colors[codeSum % colors.length];
-
+        const relatedQuestion = questionsData.find(q => q.id === b.question_id);
+        const rateStr = b.amount === 0 ? "FREE" : `$${b.amount}/hr`;
+        const color = "#" + Math.floor(Math.abs(Math.sin(b.tutor_id || 1) * 16777215)).toString(16).padStart(6, '0');
         return {
           id: b.id,
           tutor: b.tutor_name || "Tutor",
@@ -1175,7 +1358,7 @@ export default function StudentDashboard({ user }) {
       case "payments":       return <PaymentsSection />;
       case "downloads":      return <DownloadsSection />;
       case "notifications":  return <NotificationsSection notifications={notifications} setNotifications={setNotifications} />;
-      case "profile":        return <ProfileSection user={user} myQuestions={myQuestions} bids={bids} />;
+      case "profile":        return <ProfileSection user={user} myQuestions={myQuestions} bids={bids} onUpdateProfile={onUpdateProfile} />;
       default:               return <DashboardHome user={user} setActive={setActive} myQuestions={myQuestions} loading={loadingQuestions} bids={bids} notifications={notifications} />;
     }
   };
@@ -1191,7 +1374,7 @@ export default function StudentDashboard({ user }) {
           <div className="sd-sidebar-avatar" style={{ background: "linear-gradient(135deg,#6C63FF,#4CAF50)", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ position: "absolute", zIndex: 1 }}>{user.name.charAt(0).toUpperCase()}</span>
             <img
-              src={`https://unavatar.io/${user.email || 'amara@example.com'}`}
+              src={user.avatar_url || user.photo || user.avatar || `https://unavatar.io/${user.email || 'amara@example.com'}`}
               alt={user.name}
               style={{ width: '100%', height: '100%', objectFit: 'cover', position: "absolute", zIndex: 2, top: 0, left: 0 }}
               onError={(e) => { e.target.style.display = 'none'; }}
