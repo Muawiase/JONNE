@@ -40,6 +40,10 @@ export default function Navbar({ user, onLogout }) {
           <Link to="/about" style={{ color: "var(--text-secondary)", fontWeight: 500 }}>About</Link>
           <Link to="/contact" style={{ color: "var(--text-secondary)", fontWeight: 500 }}>Contact</Link>
           <Link to="/wellness" style={{ color: "var(--text-secondary)", fontWeight: 500 }}>Wellness</Link>
+          <Link to="/ai-assistant" style={{ color: "var(--text-secondary)", fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+            AI Assistant
+          </Link>
 
           <span style={{ width: 1, height: 20, background: "var(--border)", margin: "0 4px" }}></span>
 
@@ -221,6 +225,10 @@ export default function Navbar({ user, onLogout }) {
             </Link>
             <Link to="/wellness" onClick={closeMobile} style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)", padding: "4px 0" }}>
               Wellness Center
+            </Link>
+            <Link to="/ai-assistant" onClick={closeMobile} style={{ fontSize: "16px", fontWeight: 600, color: "var(--primary)", padding: "4px 0", display: "flex", alignItems: "center", gap: 6 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+              AI Study Assistant
             </Link>
           </div>
         </>

@@ -18,6 +18,7 @@ import AboutPage from "./pages/AboutPage";
 import FAQPage from "./pages/FAQPage";
 import ContactPage from "./pages/ContactPage";
 import WellnessCenterPage from "./pages/WellnessCenterPage";
+import AIStudyAssistantPage from "./pages/AIStudyAssistantPage";
 import Footer from "./components/Footer";
 import { supabase } from "./supabase";
 export default function App() {
@@ -233,6 +234,19 @@ export default function App() {
         <Route path="/faq" element={<FAQPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/wellness" element={<WellnessCenterPage />} />
+        <Route
+          path="/ai-assistant"
+          element={
+            user ? (
+              <AIStudyAssistantPage user={user} />
+            ) : (
+              <>
+                <AIStudyAssistantPage user={user} />
+                <GuestModal onClose={() => setShowGuestModal(false)} />
+              </>
+            )
+          }
+        />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       {!isAuthOverlay && <Footer />}
