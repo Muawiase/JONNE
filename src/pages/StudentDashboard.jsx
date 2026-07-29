@@ -236,15 +236,23 @@ function DashboardHome({ user, setActive, myQuestions, loading, bids, notificati
   const unread = notifications.filter((n) => !n.read).length;
 
   if (loading) {
-    return <div className="sd-section" style={{ padding: 40, textAlign: "center" }}>Loading dashboard...</div>;
+    return (
+      <div className="sd-section" style={{ padding: "60px 24px", textAlign: "center" }}>
+        <div style={{ fontSize: 24, marginBottom: 12 }}>⌛</div>
+        <p style={{ color: "var(--text-secondary)", fontSize: 15, fontWeight: 500 }}>Loading dashboard...</p>
+      </div>
+    );
   }
+
+  const userName = user?.name || user?.email?.split("@")[0] || "Student";
+  const firstName = userName.split(" ")[0];
 
   return (
     <div className="sd-section">
       {/* Welcome Banner */}
       <div className="sd-welcome-banner">
         <div className="sd-welcome-text">
-          <h1> Welcome back, {user.name.split(" ")[0]}!</h1>
+          <h1> Welcome back, {firstName}!</h1>
           <p>Track your questions, manage bids, and stay on top of your learning journey.</p>
         </div>
         <button className="btn btn-primary" onClick={() => setActive("post")}>
@@ -1280,70 +1288,78 @@ export default function StudentDashboard({ user, onUpdateProfile }) {
   const [notifications, setNotifications] = useState(mockNotifications);
 
   const fetchQuestions = async () => {
-    if (!user?.id) return;
-    setLoadingQuestions(true);
-    const { data: questionsData, error: qError } = await supabase
-      .from("questions")
-      .select("*")
-      .eq("user_id", user.id)
-      .order('created_at', { ascending: false });
-
-    if (!qError && questionsData) {
-      const questionIds = questionsData.map(q => q.id);
-      
-      let realBids = [];
-      if (questionIds.length > 0) {
-        const { data: bidsData, error: bError } = await supabase
-          .from("bids")
-          .select("*")
-          .in("question_id", questionIds)
-          .order('created_at', { ascending: false });
-        if (!bError && bidsData) realBids = bidsData;
-      }
-
-      setMyQuestions(questionsData.map(q => ({
-        id: q.id,
-        title: q.title,
-        subject: q.subject,
-        level: q.level || "High School",
-        postedAt: q.created_at,
-        status: q.status || "open",
-        bidsCount: realBids.filter(b => b.question_id === q.id).length,
-        payment: `$${q.payment || 0}`,
-        description: q.description
-      })));
-
-      const declinedBidIds = JSON.parse(localStorage.getItem("jonne_declined_bids") || "[]");
-
-      const mappedBids = realBids.map(b => {
-        const relatedQuestion = questionsData.find(q => q.id === b.question_id);
-        const rateStr = b.amount === 0 ? "FREE" : `$${b.amount}/hr`;
-        const color = "#" + Math.floor(Math.abs(Math.sin(b.tutor_id || 1) * 16777215)).toString(16).padStart(6, '0');
-        return {
-          id: b.id,
-          tutor: b.tutor_name || "Tutor",
-          tutorId: b.tutor_id,
-          avatar: (b.tutor_name || "T").charAt(0).toUpperCase(),
-          color: color,
-          question: relatedQuestion ? relatedQuestion.title : "Question",
-          questionId: b.question_id,
-          rate: rateStr,
-          message: b.message || "",
-          rating: 4.8,
-          reviews: 12,
-          status: b.accepted ? "accepted" : (declinedBidIds.includes(b.id) ? "declined" : "pending"),
-          submittedAt: b.created_at,
-          isVerified: true
-        };
-      });
-      setBids(mappedBids);
+    if (!user?.id) {
+      setLoadingQuestions(false);
+      return;
     }
-    setLoadingQuestions(false);
+    setLoadingQuestions(true);
+    try {
+      const { data: questionsData, error: qError } = await supabase
+        .from("questions")
+        .select("*")
+        .eq("user_id", user.id)
+        .order('created_at', { ascending: false });
+
+      if (!qError && questionsData) {
+        const questionIds = questionsData.map(q => q.id);
+        
+        let realBids = [];
+        if (questionIds.length > 0) {
+          const { data: bidsData, error: bError } = await supabase
+            .from("bids")
+            .select("*")
+            .in("question_id", questionIds)
+            .order('created_at', { ascending: false });
+          if (!bError && bidsData) realBids = bidsData;
+        }
+
+        setMyQuestions(questionsData.map(q => ({
+          id: q.id,
+          title: q.title,
+          subject: q.subject,
+          level: q.level || "High School",
+          postedAt: q.created_at,
+          status: q.status || "open",
+          bidsCount: realBids.filter(b => b.question_id === q.id).length,
+          payment: `$${q.payment || 0}`,
+          description: q.description
+        })));
+
+        const declinedBidIds = JSON.parse(localStorage.getItem("jonne_declined_bids") || "[]");
+
+        const mappedBids = realBids.map(b => {
+          const relatedQuestion = questionsData.find(q => q.id === b.question_id);
+          const rateStr = b.amount === 0 ? "FREE" : `$${b.amount}/hr`;
+          const color = "#" + Math.floor(Math.abs(Math.sin(b.tutor_id || 1) * 16777215)).toString(16).padStart(6, '0');
+          return {
+            id: b.id,
+            tutor: b.tutor_name || "Tutor",
+            tutorId: b.tutor_id,
+            avatar: (b.tutor_name || "T").charAt(0).toUpperCase(),
+            color: color,
+            question: relatedQuestion ? relatedQuestion.title : "Question",
+            questionId: b.question_id,
+            rate: rateStr,
+            message: b.message || "",
+            rating: 4.8,
+            reviews: 12,
+            status: b.accepted ? "accepted" : (declinedBidIds.includes(b.id) ? "declined" : "pending"),
+            submittedAt: b.created_at,
+            isVerified: true
+          };
+        });
+        setBids(mappedBids);
+      }
+    } catch (err) {
+      console.error("Error loading student questions:", err);
+    } finally {
+      setLoadingQuestions(false);
+    }
   };
 
   useEffect(() => {
     fetchQuestions();
-  }, [user?.id]);
+  }, [user?.id, user]);
 
   const pendingBidsCount = bids.filter((b) => b.status === "pending").length;
   const unreadNotifsCount = notifications.filter((n) => !n.read).length;
@@ -1372,16 +1388,18 @@ export default function StudentDashboard({ user, onUpdateProfile }) {
       <aside className={`sd-sidebar ${sidebarOpen ? "sd-sidebar-open" : ""}`}>
         <div className="sd-sidebar-user">
           <div className="sd-sidebar-avatar" style={{ background: "linear-gradient(135deg,#6C63FF,#4CAF50)", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ position: "absolute", zIndex: 1 }}>{user.name.charAt(0).toUpperCase()}</span>
+            <span style={{ position: "absolute", zIndex: 1 }}>
+              {(user?.name || user?.email || "S").charAt(0).toUpperCase()}
+            </span>
             <img
-              src={user.avatar_url || user.photo || user.avatar || `https://unavatar.io/${user.email || 'amara@example.com'}`}
-              alt={user.name}
+              src={user?.avatar_url || user?.photo || user?.avatar || `https://unavatar.io/${user?.email || 'amara@example.com'}`}
+              alt={user?.name || "Student"}
               style={{ width: '100%', height: '100%', objectFit: 'cover', position: "absolute", zIndex: 2, top: 0, left: 0 }}
               onError={(e) => { e.target.style.display = 'none'; }}
             />
           </div>
           <div>
-            <div className="sd-sidebar-name">{user.name}</div>
+            <div className="sd-sidebar-name">{user?.name || user?.email?.split("@")[0] || "Student"}</div>
             <div className="sd-sidebar-role"> Student</div>
           </div>
         </div>
