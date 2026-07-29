@@ -1296,22 +1296,16 @@ export default function StudentDashboard({ user, onUpdateProfile }) {
     try {
       const { data: questionsData, error: qError } = await supabase
         .from("questions")
-        .select("*")
+        .select(`
+          *,
+          bids:bids(*)
+        `)
         .eq("user_id", user.id)
         .order('created_at', { ascending: false });
 
       if (!qError && questionsData) {
-        const questionIds = questionsData.map(q => q.id);
-        
-        let realBids = [];
-        if (questionIds.length > 0) {
-          const { data: bidsData, error: bError } = await supabase
-            .from("bids")
-            .select("*")
-            .in("question_id", questionIds)
-            .order('created_at', { ascending: false });
-          if (!bError && bidsData) realBids = bidsData;
-        }
+        // Flatten nested bids
+        const realBids = questionsData.flatMap(q => q.bids || []);
 
         setMyQuestions(questionsData.map(q => ({
           id: q.id,
@@ -1320,7 +1314,7 @@ export default function StudentDashboard({ user, onUpdateProfile }) {
           level: q.level || "High School",
           postedAt: q.created_at,
           status: q.status || "open",
-          bidsCount: realBids.filter(b => b.question_id === q.id).length,
+          bidsCount: (q.bids || []).length,
           payment: `$${q.payment || 0}`,
           description: q.description
         })));

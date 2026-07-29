@@ -198,32 +198,57 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
   // ─── SETUP: QUESTION + REALTIME ───────────────────────────────────────────
 
   useEffect(() => {
-    const fetchQuestion = async () => {
+    const fetchAllData = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('questions').select('*').eq('id', id).single();
-      if (!error && data) {
-        setQuestion({
-          ...data,
-          isPaid: data.payment !== null && data.payment > 0,
-          pricePerHour: data.payment || 0,
-          status: data.status || 'open',
-          responses: 0,
-          tags: [],
-          grade: data.level,
-          studentName: "Student",
-          user_id: data.user_id,
-          deadline: data.deadline || new Date().toISOString()
-        });
+      setLoadingBids(true);
+      setChatLoading(true);
+
+      try {
+        const [qRes, bRes, mRes, pRes] = await Promise.all([
+          supabase.from('questions').select('*').eq('id', id).single(),
+          supabase.from('bids').select('*').eq('question_id', id).order('created_at', { ascending: false }),
+          supabase.from('messages').select('*').eq('question_id', id).order('created_at', { ascending: true }),
+          supabase.from('payments').select('*').eq('question_id', id)
+        ]);
+
+        if (!qRes.error && qRes.data) {
+          setQuestion({
+            ...qRes.data,
+            isPaid: qRes.data.payment !== null && qRes.data.payment > 0,
+            pricePerHour: qRes.data.payment || 0,
+            status: qRes.data.status || 'open',
+            responses: 0,
+            tags: [],
+            grade: qRes.data.level,
+            studentName: "Student",
+            user_id: qRes.data.user_id,
+            deadline: qRes.data.deadline || new Date().toISOString()
+          });
+        }
+
+        if (bRes.data) {
+          setBids(bRes.data);
+          if (bRes.data.some(b => b.accepted)) setAccepted(true);
+        }
+
+        if (mRes.data) {
+          setChatMessages(mRes.data);
+        }
+
+        if (pRes.data) {
+          setPayments(pRes.data);
+        }
+      } catch (err) {
+        console.error("Error loading question detail data:", err);
+      } finally {
+        setLoading(false);
+        setLoadingBids(false);
+        setChatLoading(false);
       }
-      setLoading(false);
     };
 
     if (id) {
-      fetchQuestion();
-      fetchBids();
-      fetchMessages();
-      fetchPayments();
+      fetchAllData();
 
       // Supabase Realtime — listen for new messages on this question
       const channel = supabase
