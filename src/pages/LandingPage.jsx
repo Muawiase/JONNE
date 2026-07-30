@@ -39,7 +39,7 @@ export default function LandingPage({ user }) {
       // Fetch real questions from Supabase
       const { data: qData } = await supabase
         .from("questions")
-        .select("*")
+        .select("id, title, description, subject, level, payment, created_at, status")
         .order("created_at", { ascending: false });
 
       if (qData) {
@@ -62,7 +62,7 @@ export default function LandingPage({ user }) {
         // Fetch real messages count
         const { count: msgCount } = await supabase
           .from("messages")
-          .select("*", { count: "exact", head: true });
+          .select("id", { count: "exact", head: true });
 
         setStats({
           totalQuestions: total,

@@ -235,17 +235,17 @@ function DashboardHome({ user, setActive, myQuestions, loading, bids, notificati
   const solved = myQuestions.filter((q) => q.status === "solved");
   const unread = notifications.filter((n) => !n.read).length;
 
-  if (loading) {
-    return (
-      <div className="sd-section" style={{ padding: "60px 24px", textAlign: "center" }}>
-        <div style={{ fontSize: 24, marginBottom: 12 }}>⌛</div>
-        <p style={{ color: "var(--text-secondary)", fontSize: 15, fontWeight: 500 }}>Loading dashboard...</p>
-      </div>
-    );
-  }
-
   const userName = user?.name || user?.email?.split("@")[0] || "Student";
   const firstName = userName.split(" ")[0];
+
+  const renderStatNum = (num) => {
+    if (loading) {
+      return (
+        <span className="skeleton" style={{ display: "inline-block", height: 28, width: 45, borderRadius: 4, verticalAlign: "middle" }}></span>
+      );
+    }
+    return num;
+  };
 
   return (
     <div className="sd-section">
@@ -263,12 +263,12 @@ function DashboardHome({ user, setActive, myQuestions, loading, bids, notificati
       {/* Stats Row */}
       <div className="sd-stats-grid">
         {[
-          { icon: "", num: myQuestions.length, label: "Total Questions", color: "#6C63FF", onClick: () => setActive("my-questions") },
-          { icon: "", num: open.length, label: "Open", color: "#4CAF50", onClick: () => setActive("my-questions") },
-          { icon: "", num: inProgress.length, label: "In Progress", color: "#FF9800", onClick: () => setActive("my-questions") },
-          { icon: "", num: solved.length, label: "Solved", color: "#2196F3", onClick: () => setActive("my-questions") },
-          { icon: "", num: bids.length, label: "Total Bids", color: "#E91E63", onClick: () => setActive("bids") },
-          { icon: "", num: unread, label: "Unread Alerts", color: "#FF5722", onClick: () => setActive("notifications") },
+          { icon: "", num: renderStatNum(myQuestions.length), label: "Total Questions", color: "#6C63FF", onClick: () => setActive("my-questions") },
+          { icon: "", num: renderStatNum(open.length), label: "Open", color: "#4CAF50", onClick: () => setActive("my-questions") },
+          { icon: "", num: renderStatNum(inProgress.length), label: "In Progress", color: "#FF9800", onClick: () => setActive("my-questions") },
+          { icon: "", num: renderStatNum(solved.length), label: "Solved", color: "#2196F3", onClick: () => setActive("my-questions") },
+          { icon: "", num: renderStatNum(bids.length), label: "Total Bids", color: "#E91E63", onClick: () => setActive("bids") },
+          { icon: "", num: renderStatNum(unread), label: "Unread Alerts", color: "#FF5722", onClick: () => setActive("notifications") },
         ].map((s) => (
           <div className="sd-stat-card" key={s.label} onClick={s.onClick} style={{ "--accent-color": s.color }}>
             <div className="sd-stat-icon" style={{ background: s.color + "18", color: s.color }}>{s.icon}</div>
@@ -285,23 +285,44 @@ function DashboardHome({ user, setActive, myQuestions, loading, bids, notificati
           <button className="sd-link-btn" onClick={() => setActive("my-questions")}>View all →</button>
         </div>
         <div className="sd-list">
-          {myQuestions.slice(0, 3).map((q) => {
-            const sc = statusConfig[q.status] || statusConfig.open;
-            return (
-              <div className="sd-list-item" key={q.id}>
-                <span className="sd-status-dot" style={{ background: sc.color }}></span>
+          {loading ? (
+            <>
+              <div className="sd-list-item">
+                <span className="sd-status-dot skeleton" style={{ width: 8, height: 8, borderRadius: "50%", background: "#e0e0e0" }}></span>
                 <div className="sd-list-item-body">
-                  <Link to={`/question/${q.id}`} className="sd-list-title">{q.title}</Link>
-                  <div className="sd-list-meta">
-                    <span className="sd-pill" style={{ background: sc.color + "18", color: sc.color }}>{sc.icon} {sc.label}</span>
-                    <span> {q.responses} bids</span>
-                    <span> Due {new Date(q.deadline).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
-                  </div>
+                  <div className="skeleton" style={{ height: 16, width: "60%", borderRadius: 4, marginBottom: 8 }}></div>
+                  <div className="skeleton" style={{ height: 12, width: "30%", borderRadius: 4 }}></div>
                 </div>
-                <Link to={`/question/${q.id}`}><button className="btn btn-sm btn-secondary">View →</button></Link>
               </div>
-            );
-          })}
+              <div className="sd-list-item">
+                <span className="sd-status-dot skeleton" style={{ width: 8, height: 8, borderRadius: "50%", background: "#e0e0e0" }}></span>
+                <div className="sd-list-item-body">
+                  <div className="skeleton" style={{ height: 16, width: "45%", borderRadius: 4, marginBottom: 8 }}></div>
+                  <div className="skeleton" style={{ height: 12, width: "25%", borderRadius: 4 }}></div>
+                </div>
+              </div>
+            </>
+          ) : myQuestions.length === 0 ? (
+            <div style={{ padding: "16px 0", color: "var(--text-muted)", fontSize: 14 }}>No questions posted yet.</div>
+          ) : (
+            myQuestions.slice(0, 3).map((q) => {
+              const sc = statusConfig[q.status] || statusConfig.open;
+              return (
+                <div className="sd-list-item" key={q.id}>
+                  <span className="sd-status-dot" style={{ background: sc.color }}></span>
+                  <div className="sd-list-item-body">
+                    <Link to={`/question/${q.id}`} className="sd-list-title">{q.title}</Link>
+                    <div className="sd-list-meta">
+                      <span className="sd-pill" style={{ background: sc.color + "18", color: sc.color }}>{sc.icon} {sc.label}</span>
+                      <span> {q.responses} bids</span>
+                      <span> Due {new Date(q.deadline).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+                    </div>
+                  </div>
+                  <Link to={`/question/${q.id}`}><button className="btn btn-sm btn-secondary">View →</button></Link>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -597,10 +618,6 @@ function MyQuestionsSection({ myQuestions, loading }) {
   const [filter, setFilter] = useState("all");
   const filtered = filter === "all" ? myQuestions : myQuestions.filter((q) => q.status === filter);
 
-  if (loading) {
-    return <div className="sd-section" style={{ padding: 40, textAlign: "center" }}>Loading questions...</div>;
-  }
-
   return (
     <div className="sd-section">
       <div className="sd-page-header">
@@ -621,48 +638,65 @@ function MyQuestionsSection({ myQuestions, loading }) {
           >
             {t.label}
             <span className="sd-tab-count">
-              {t.value === "all" ? myQuestions.length : myQuestions.filter((q) => q.status === t.value).length}
+              {loading ? "..." : (t.value === "all" ? myQuestions.length : myQuestions.filter((q) => q.status === t.value).length)}
             </span>
           </button>
         ))}
       </div>
       <div className="sd-question-list">
-        {filtered.map((q) => {
-          const sc = statusConfig[q.status] || statusConfig.open;
-          return (
-            <div className="sd-question-card" key={q.id}>
-              <div className="sd-question-card-top">
-                <div className="sd-question-badges">
-                  <span className="sd-pill" style={{ background: sc.color + "18", color: sc.color }}>{sc.icon} {sc.label}</span>
-                  <span className="sd-pill" style={{ background: "#6C63FF18", color: "#6C63FF" }}>{q.subjectIcon} {q.subject}</span>
-                  {q.isPaid ? (
-                    <span className="sd-pill" style={{ background: "#2196F318", color: "#2196F3" }}> ${q.pricePerHour}/hr</span>
-                  ) : (
-                    <span className="sd-pill" style={{ background: "#4CAF5018", color: "#4CAF50" }}> FREE</span>
-                  )}
-                </div>
-              </div>
-              <Link to={`/question/${q.id}`} className="sd-question-title">{q.title}</Link>
-              <p className="sd-question-excerpt">{q.description}</p>
-              <div className="sd-question-footer">
-                <div className="sd-question-meta">
-                  <span> {q.responses} bids</span>
-                  <span> Due {new Date(q.deadline).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
-                  <span> {q.level}</span>
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <Link to={`/question/${q.id}`}><button className="btn btn-sm btn-primary">View →</button></Link>
-                </div>
-              </div>
+        {loading ? (
+          <>
+            <div className="sd-question-card" style={{ padding: 20 }}>
+              <div className="skeleton" style={{ height: 20, width: "65%", borderRadius: 4, marginBottom: 12 }}></div>
+              <div className="skeleton" style={{ height: 14, width: "85%", borderRadius: 4, marginBottom: 8 }}></div>
+              <div className="skeleton" style={{ height: 14, width: "40%", borderRadius: 4 }}></div>
             </div>
-          );
-        })}
-        {filtered.length === 0 && (
-          <div className="sd-empty">
-            <div className="sd-empty-icon"></div>
-            <div className="sd-empty-title">No questions here</div>
-            <div className="sd-empty-sub">Questions with this status will appear here.</div>
-          </div>
+            <div className="sd-question-card" style={{ padding: 20 }}>
+              <div className="skeleton" style={{ height: 20, width: "55%", borderRadius: 4, marginBottom: 12 }}></div>
+              <div className="skeleton" style={{ height: 14, width: "80%", borderRadius: 4, marginBottom: 8 }}></div>
+              <div className="skeleton" style={{ height: 14, width: "35%", borderRadius: 4 }}></div>
+            </div>
+          </>
+        ) : (
+          <>
+            {filtered.map((q) => {
+              const sc = statusConfig[q.status] || statusConfig.open;
+              return (
+                <div className="sd-question-card" key={q.id}>
+                  <div className="sd-question-card-top">
+                    <div className="sd-question-badges">
+                      <span className="sd-pill" style={{ background: sc.color + "18", color: sc.color }}>{sc.icon} {sc.label}</span>
+                      <span className="sd-pill" style={{ background: "#6C63FF18", color: "#6C63FF" }}>{q.subjectIcon} {q.subject}</span>
+                      {q.isPaid ? (
+                        <span className="sd-pill" style={{ background: "#2196F318", color: "#2196F3" }}> ${q.pricePerHour}/hr</span>
+                      ) : (
+                        <span className="sd-pill" style={{ background: "#4CAF5018", color: "#4CAF50" }}> FREE</span>
+                      )}
+                    </div>
+                  </div>
+                  <Link to={`/question/${q.id}`} className="sd-question-title">{q.title}</Link>
+                  <p className="sd-question-excerpt">{q.description}</p>
+                  <div className="sd-question-footer">
+                    <div className="sd-question-meta">
+                      <span> {q.responses} bids</span>
+                      <span> Due {new Date(q.deadline).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
+                      <span> {q.level}</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <Link to={`/question/${q.id}`}><button className="btn btn-sm btn-primary">View →</button></Link>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {filtered.length === 0 && (
+              <div className="sd-empty">
+                <div className="sd-empty-icon"></div>
+                <div className="sd-empty-title">No questions here</div>
+                <div className="sd-empty-sub">Questions with this status will appear here.</div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -1278,6 +1312,10 @@ function ProfileSection({ user, myQuestions, bids, onUpdateProfile }) {
   );
 }
 
+// Cache variables for StudentDashboard to allow instant rendering
+let cachedStudentQuestions = null;
+let cachedStudentUserId = null;
+
 //  MAIN COMPONENT 
 export default function StudentDashboard({ user, onUpdateProfile }) {
   const [active, setActive] = useState("dashboard");
@@ -1292,13 +1330,21 @@ export default function StudentDashboard({ user, onUpdateProfile }) {
       setLoadingQuestions(false);
       return;
     }
-    setLoadingQuestions(true);
+    
+    if (cachedStudentQuestions && cachedStudentUserId === user.id) {
+      setMyQuestions(cachedStudentQuestions.myQuestions);
+      setBids(cachedStudentQuestions.bids);
+      setLoadingQuestions(false);
+    } else {
+      setLoadingQuestions(true);
+    }
+
     try {
       const { data: questionsData, error: qError } = await supabase
         .from("questions")
         .select(`
-          *,
-          bids:bids(*)
+          id, title, subject, level, payment, description, created_at, status,
+          bids:bids(id, amount, tutor_name, tutor_id, question_id, message, accepted, created_at)
         `)
         .eq("user_id", user.id)
         .order('created_at', { ascending: false });
@@ -1307,7 +1353,7 @@ export default function StudentDashboard({ user, onUpdateProfile }) {
         // Flatten nested bids
         const realBids = questionsData.flatMap(q => q.bids || []);
 
-        setMyQuestions(questionsData.map(q => ({
+        const nextMyQuestions = questionsData.map(q => ({
           id: q.id,
           title: q.title,
           subject: q.subject,
@@ -1317,7 +1363,8 @@ export default function StudentDashboard({ user, onUpdateProfile }) {
           bidsCount: (q.bids || []).length,
           payment: `$${q.payment || 0}`,
           description: q.description
-        })));
+        }));
+        setMyQuestions(nextMyQuestions);
 
         const declinedBidIds = JSON.parse(localStorage.getItem("jonne_declined_bids") || "[]");
 
@@ -1343,6 +1390,9 @@ export default function StudentDashboard({ user, onUpdateProfile }) {
           };
         });
         setBids(mappedBids);
+
+        cachedStudentQuestions = { myQuestions: nextMyQuestions, bids: mappedBids };
+        cachedStudentUserId = user.id;
       }
     } catch (err) {
       console.error("Error loading student questions:", err);
@@ -1353,7 +1403,7 @@ export default function StudentDashboard({ user, onUpdateProfile }) {
 
   useEffect(() => {
     fetchQuestions();
-  }, [user?.id, user]);
+  }, [user?.id]);
 
   const pendingBidsCount = bids.filter((b) => b.status === "pending").length;
   const unreadNotifsCount = notifications.filter((n) => !n.read).length;
