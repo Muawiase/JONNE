@@ -91,12 +91,14 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
 
   // Get author name and avatar using current session data or saved cache
   const getAuthorInfo = (userId) => {
-    if (user && user.id === userId) {
-      return {
-        name: user.name || "You",
+    if (user && (user.id === userId || String(user.id) === String(userId))) {
+      const currentAuthor = {
+        name: user.name || user.email?.split("@")[0] || "User",
         avatar: user.avatar_url || user.photo || user.avatar || "",
         role: user.role || "student"
       };
+      if (user.id) saveAuthorCache(user.id, currentAuthor);
+      return currentAuthor;
     }
     const cache = getAuthorCache();
     if (cache[userId]) {
@@ -108,6 +110,16 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
       role: "Student"
     };
   };
+
+  useEffect(() => {
+    if (user && user.id) {
+      saveAuthorCache(user.id, {
+        name: user.name || user.email?.split("@")[0] || "User",
+        avatar: user.avatar_url || user.photo || user.avatar || "",
+        role: user.role || "student",
+      });
+    }
+  }, [user]);
 
   const fetchPostsAndData = async ({ showLoading = true } = {}) => {
     if (showLoading) setLoading(true);
