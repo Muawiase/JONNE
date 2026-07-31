@@ -19,36 +19,29 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
   const [successMessage, setSuccessMessage] = useState("");
   const fileInputRef = useRef(null);
 
-  const canPost = user && (user.role === "student" || user.role === "tutor");
+  const canPost = Boolean(user);
 
-  // Same session guard as Post Question — posts require a real Supabase auth UUID.
+  // Session guard: check that user object is present
   const requireSupabaseUser = () => {
-    if (!user) {
+    if (!user || !user.id) {
       return { ok: false, message: "You must be logged in to post." };
-    }
-    if (typeof user.id !== "string" || user.id.length < 10) {
-      alert("Your login session is out of date. Logging you out to refresh your session.");
-      supabase.auth.signOut().then(() => window.location.reload());
-      return { ok: false };
     }
     return { ok: true, userId: user.id };
   };
 
   async function getAuthenticatedUserId() {
-    // Priority: Use active prop user.id if available
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (data?.session?.user?.id) {
+        return data.session.user.id;
+      }
+    } catch (e) {
+      console.warn("Could not retrieve session from Supabase:", e);
+    }
     if (user?.id && typeof user.id === "string" && user.id.length > 10) {
       return user.id;
     }
-    const { data, error } = await supabase.auth.getSession();
-    if (error) {
-      console.error("Supabase auth session error:", error);
-      throw error;
-    }
-    const sessionUserId = data?.session?.user?.id;
-    if (!sessionUserId) {
-      throw new Error("Please log in again to publish posts.");
-    }
-    return sessionUserId;
+    throw new Error("Authenticating session failed. Please log out and log in again.");
   }
 
   async function uploadKnowledgeFile(file) {
@@ -473,7 +466,7 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
                 <div className="post-form-author-info">
                   <span className="post-author-name">{user.name}</span>
                   <span className="post-author-role">
-                    {user.role === "tutor" ? "Verified Tutor" : "Student"}
+                    {user?.role === "tutor" ? "Verified Tutor" : user?.role === "admin" ? "Administrator" : "Student"}
                   </span>
                 </div>
               </div>
