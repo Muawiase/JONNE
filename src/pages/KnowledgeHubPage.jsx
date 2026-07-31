@@ -33,15 +33,55 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
     return { ok: true, userId: user.id };
   };
 
+  const SUPABASE_TIMEOUT_MS = 20000;
+
+  /** Prevent hung requests from leaving the UI stuck on "Publishing…" */
+  async function awaitSupabase(queryPromise, timeoutMs = SUPABASE_TIMEOUT_MS) {
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error("Connection timed out. Please check your network and try again.")),
+        timeoutMs
+      );
+    });
+    try {
+      return await Promise.race([queryPromise, timeout]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function getAuthenticatedUserId() {
+    const { data, error } = await awaitSupabase(supabase.auth.getSession(), 10000);
+    if (error) throw error;
+    const sessionUserId = data?.session?.user?.id;
+    if (!sessionUserId) {
+      throw new Error("Please log in again to publish posts.");
+    }
+    return sessionUserId;
+  }
+
   async function uploadKnowledgeFile(file) {
     const ext = file.name.split(".").pop();
     const path = `posts/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage
-      .from("knowledge-files")
-      .upload(path, file, { upsert: false });
+    const { error } = await awaitSupabase(
+      supabase.storage.from("knowledge-files").upload(path, file, { upsert: false }),
+      60000
+    );
     if (error) throw error;
     const { data } = supabase.storage.from("knowledge-files").getPublicUrl(path);
     return data.publicUrl;
+  }
+
+  async function refreshPostsFeed() {
+    const postsRes = await awaitSupabase(
+      supabase.from("knowledge_posts").select("*").order("created_at", { ascending: false })
+    );
+    if (postsRes.error) {
+      console.error("Error refreshing posts:", postsRes.error);
+      return;
+    }
+    setPosts(postsRes.data || []);
   }
 
   // Helper to read cached author profiles
@@ -99,11 +139,9 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
     if (showLoading) setLoading(true);
     setError("");
     try {
-      const [postsRes, likesRes, commentsRes] = await Promise.all([
-        supabase.from("knowledge_posts").select("*").order("created_at", { ascending: false }),
-        supabase.from("knowledge_likes").select("*"),
-        supabase.from("knowledge_comments").select("*").order("created_at", { ascending: true }),
-      ]);
+      const postsRes = await awaitSupabase(
+        supabase.from("knowledge_posts").select("*").order("created_at", { ascending: false })
+      );
 
       if (postsRes.error) {
         console.error("Error fetching posts:", postsRes.error);
@@ -112,7 +150,17 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
         setPosts(postsRes.data || []);
       }
 
-      if (!likesRes.error && likesRes.data) {
+      const [likesResult, commentsResult] = await Promise.allSettled([
+        awaitSupabase(supabase.from("knowledge_likes").select("*")),
+        awaitSupabase(
+          supabase.from("knowledge_comments").select("*").order("created_at", { ascending: true })
+        ),
+      ]);
+
+      const likesRes = likesResult.status === "fulfilled" ? likesResult.value : null;
+      const commentsRes = commentsResult.status === "fulfilled" ? commentsResult.value : null;
+
+      if (likesRes && !likesRes.error && likesRes.data) {
         const lMap = {};
         likesRes.data.forEach((like) => {
           if (!lMap[like.post_id]) lMap[like.post_id] = [];
@@ -121,7 +169,7 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
         setLikesMap(lMap);
       }
 
-      if (!commentsRes.error && commentsRes.data) {
+      if (commentsRes && !commentsRes.error && commentsRes.data) {
         const cMap = {};
         commentsRes.data.forEach((c) => {
           if (!cMap[c.post_id]) cMap[c.post_id] = [];
@@ -188,11 +236,16 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
     setSubmitting(true);
     setError("");
 
+    const trimmedContent = content.trim();
+    const savedFile = selectedFile;
+
     try {
+      const sessionUserId = await getAuthenticatedUserId();
+
       let uploadedFileUrl = null;
-      if (selectedFile) {
+      if (savedFile) {
         try {
-          uploadedFileUrl = await uploadKnowledgeFile(selectedFile);
+          uploadedFileUrl = await uploadKnowledgeFile(savedFile);
         } catch (uploadErr) {
           console.error("Storage upload error:", uploadErr);
           throw new Error(uploadErr.message || "Failed to upload attachment.");
@@ -200,15 +253,17 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
       }
 
       const postPayload = {
-        user_id: auth.userId,
-        content: content.trim(),
+        user_id: sessionUserId,
+        content: trimmedContent,
         file_url: uploadedFileUrl || null,
       };
 
-      const { error: insertError } = await supabase.from("knowledge_posts").insert(postPayload);
+      const { error: insertError } = await awaitSupabase(
+        supabase.from("knowledge_posts").insert(postPayload)
+      );
       if (insertError) throw insertError;
 
-      saveAuthorCache(auth.userId, {
+      saveAuthorCache(sessionUserId, {
         name: user.name,
         avatar: user.avatar_url || user.photo || user.avatar || "",
         role: user.role,
@@ -219,7 +274,18 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
       setFilePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
 
-      await fetchPostsAndData({ showLoading: false });
+      setPosts((prev) => [
+        {
+          id: `local-${Date.now()}`,
+          user_id: sessionUserId,
+          content: trimmedContent,
+          file_url: uploadedFileUrl || null,
+          created_at: new Date().toISOString(),
+        },
+        ...prev,
+      ]);
+
+      refreshPostsFeed().catch((err) => console.warn("Background feed refresh failed:", err));
     } catch (err) {
       console.error("Posting error details:", err);
       setError(err.message || "Something went wrong. Please try again.");
