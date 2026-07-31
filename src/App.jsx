@@ -19,6 +19,7 @@ import FAQPage from "./pages/FAQPage";
 import ContactPage from "./pages/ContactPage";
 import WellnessCenterPage from "./pages/WellnessCenterPage";
 import AIStudyAssistantPage from "./pages/AIStudyAssistantPage";
+import KnowledgeHubPage from "./pages/KnowledgeHubPage";
 import Footer from "./components/Footer";
 import { supabase } from "./supabase";
 export default function App() {
@@ -247,6 +248,11 @@ export default function App() {
             )
           }
         />
+        <Route
+          path="/knowledge-hub"
+          element={<KnowledgeHubPage user={user} onGuestAction={() => setShowGuestModal(true)} />}
+        />
+        <Route path="/knowledge" element={<Navigate to="/knowledge-hub" replace />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       {!isAuthOverlay && <Footer />}

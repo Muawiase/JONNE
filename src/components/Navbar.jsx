@@ -1,5 +1,5 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 const getInitials = (name) => {
   if (!name) return "";
@@ -8,6 +8,7 @@ const getInitials = (name) => {
 
 export default function Navbar({ user, onLogout }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const dashboardPath = user?.role === "admin" ? "/dashboard/admin" : user?.role === "tutor" ? "/dashboard/tutor" : "/dashboard/student";
@@ -18,15 +19,21 @@ export default function Navbar({ user, onLogout }) {
     setMobileOpen((prev) => !prev);
   };
 
+  // Close mobile drawer on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
   return (
-    <nav className="navbar" style={{ position: "sticky", top: 0, zIndex: 200, background: "white" }}>
+    <nav className="navbar" style={{ position: "sticky", top: 0, zIndex: 200, background: "rgba(255, 255, 255, 0.95)", backdropFilter: "blur(12px)" }}>
       <div className="container" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", position: "relative" }}>
-        <Link to="/" className="navbar-logo" onClick={closeMobile} style={{ display: "flex", alignItems: "center" }}>
+        {/* LOGO */}
+        <Link to="/" className="navbar-logo" onClick={closeMobile} style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
           <img
             src="/logo.png"
             alt="JONNE"
             style={{
-              height: "40px",
+              height: "38px",
               width: "auto",
               objectFit: "contain",
               display: "block",
@@ -34,33 +41,34 @@ export default function Navbar({ user, onLogout }) {
           />
         </Link>
 
-        {/* Desktop Links */}
-        <div className="navbar-links desktop-only" style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-          <Link to="/browse" style={{ color: "var(--text-secondary)", fontWeight: 500 }}>Browse</Link>
-          <Link to="/about" style={{ color: "var(--text-secondary)", fontWeight: 500 }}>About</Link>
-          <Link to="/contact" style={{ color: "var(--text-secondary)", fontWeight: 500 }}>Contact</Link>
-          <Link to="/wellness" style={{ color: "var(--text-secondary)", fontWeight: 500 }}>Wellness</Link>
-          <Link to="/ai-assistant" style={{ color: "var(--text-secondary)", fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
+        {/* Desktop Navigation Links */}
+        <div className="navbar-links desktop-only" style={{ display: "flex", alignItems: "center", gap: "12px", whiteSpace: "nowrap" }}>
+          <Link to="/browse" className="nav-item-link">Browse</Link>
+          <Link to="/knowledge-hub" className="nav-item-link">Knowledge Hub</Link>
+          <Link to="/about" className="nav-item-link">About</Link>
+          <Link to="/contact" className="nav-item-link">Contact</Link>
+          <Link to="/wellness" className="nav-item-link">Wellness</Link>
+          <Link to="/ai-assistant" className="nav-item-link ai-link">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
             AI Assistant
           </Link>
 
-          <span style={{ width: 1, height: 20, background: "var(--border)", margin: "0 4px" }}></span>
+          <span style={{ width: 1, height: 20, background: "var(--border)", margin: "0 4px", flexShrink: 0 }}></span>
 
           {user ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
               {user.role === "student" && (
-                <Link to="/post" className="btn btn-sm btn-secondary" style={{ borderRadius: "var(--radius-sm)" }}>
+                <Link to="/post" className="btn btn-sm btn-secondary" style={{ borderRadius: "var(--radius-sm)", whiteSpace: "nowrap" }}>
                   Post Question
                 </Link>
               )}
-              <Link to={dashboardPath} style={{ fontWeight: 600, color: "var(--primary)" }}>
+              <Link to={dashboardPath} style={{ fontWeight: 600, color: "var(--primary)", whiteSpace: "nowrap", fontSize: "14px", padding: "6px 10px" }}>
                 Dashboard
               </Link>
               <div className="navbar-user" style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div
                   className="navbar-avatar"
-                  style={{ background: user.avatarColor, width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 13, position: "relative", overflow: "hidden" }}
+                  style={{ background: user.avatarColor || "var(--primary)", width: 34, height: 34, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 13, position: "relative", overflow: "hidden", flexShrink: 0 }}
                 >
                   <span style={{ position: "absolute", zIndex: 1 }}>{getInitials(user.name)}</span>
                   <img
@@ -71,22 +79,23 @@ export default function Navbar({ user, onLogout }) {
                   />
                 </div>
                 <button
+                  type="button"
                   className="btn btn-sm"
                   onClick={() => { onLogout(); navigate("/"); }}
-                  style={{ background: "transparent", color: "var(--accent)", fontWeight: 600, padding: "4px 8px" }}
+                  style={{ background: "transparent", color: "var(--accent)", fontWeight: 600, padding: "4px 8px", whiteSpace: "nowrap" }}
                 >
                   Sign Out
                 </button>
               </div>
             </div>
           ) : (
-            <Link to="/login" className="btn btn-sm btn-primary nav-cta" style={{ borderRadius: "99px" }}>
+            <Link to="/login" className="btn btn-sm btn-primary nav-cta" style={{ borderRadius: "99px", whiteSpace: "nowrap" }}>
               Log In / Sign Up
             </Link>
           )}
         </div>
 
-        {/* Mobile Hamburger Toggle */}
+        {/* Mobile Hamburger Toggle Button */}
         <button
           type="button"
           className="hamburger-btn"
@@ -114,7 +123,6 @@ export default function Navbar({ user, onLogout }) {
       {/* Mobile Backdrop & Drawer */}
       {mobileOpen && (
         <>
-          {/* Backdrop overlay to close menu when tapping outside */}
           <div
             className="mobile-menu-backdrop"
             onClick={closeMobile}
@@ -126,11 +134,10 @@ export default function Navbar({ user, onLogout }) {
               bottom: 0,
               background: "rgba(0, 0, 0, 0.4)",
               zIndex: 190,
-              backdropFilter: "blur(2px)",
+              backdropFilter: "blur(4px)",
             }}
           />
 
-          {/* Mobile Menu Dropdown */}
           <div
             className="mobile-menu"
             style={{
@@ -141,24 +148,24 @@ export default function Navbar({ user, onLogout }) {
               width: "100%",
               background: "white",
               borderBottom: "1px solid var(--border)",
-              boxShadow: "var(--shadow-md)",
+              boxShadow: "var(--shadow-lg)",
               padding: "20px 24px 24px",
               display: "flex",
               flexDirection: "column",
-              gap: "16px",
+              gap: "14px",
               zIndex: 200,
               maxHeight: "calc(100vh - 72px)",
               overflowY: "auto",
             }}
           >
-            {/* Top Action Section: Log In & Sign Up at the top */}
+            {/* Top User Account / Login Section */}
             {!user ? (
               <div style={{ display: "flex", gap: 12, width: "100%", marginBottom: 4 }}>
                 <Link
                   to="/login"
                   onClick={closeMobile}
                   className="btn btn-primary"
-                  style={{ flex: 1, justifyContent: "center", color: "white", textAlign: "center" }}
+                  style={{ flex: 1, justifyContent: "center", color: "white", textAlign: "center", borderRadius: "99px" }}
                 >
                   Log In
                 </Link>
@@ -166,17 +173,17 @@ export default function Navbar({ user, onLogout }) {
                   to="/login"
                   onClick={closeMobile}
                   className="btn btn-secondary"
-                  style={{ flex: 1, justifyContent: "center", textAlign: "center" }}
+                  style={{ flex: 1, justifyContent: "center", textAlign: "center", borderRadius: "99px" }}
                 >
                   Sign Up
                 </Link>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 4 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div
                     className="navbar-avatar"
-                    style={{ background: user.avatarColor, width: 38, height: 38, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 14, position: "relative", overflow: "hidden" }}
+                    style={{ background: user.avatarColor || "var(--primary)", width: 42, height: 42, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 15, position: "relative", overflow: "hidden", flexShrink: 0 }}
                   >
                     <span style={{ position: "absolute", zIndex: 1 }}>{getInitials(user.name)}</span>
                     <img
@@ -187,47 +194,51 @@ export default function Navbar({ user, onLogout }) {
                     />
                   </div>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: "15px" }}>{user.name}</div>
-                    <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>{user.role === "admin" ? "Admin" : user.role === "tutor" ? "Tutor" : "Student"}</div>
+                    <div style={{ fontWeight: 700, fontSize: "16px", color: "var(--text-primary)" }}>{user.name}</div>
+                    <div style={{ fontSize: "12px", color: "var(--text-muted)", textTransform: "capitalize" }}>{user.role === "admin" ? "Admin" : user.role === "tutor" ? "Tutor" : "Student"}</div>
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
                   {user.role === "student" && (
-                    <Link to="/post" onClick={closeMobile} className="btn btn-secondary" style={{ flex: 1, justifyContent: "center" }}>
+                    <Link to="/post" onClick={closeMobile} className="btn btn-secondary" style={{ flex: 1, justifyContent: "center", borderRadius: "var(--radius-sm)" }}>
                       Post Question
                     </Link>
                   )}
-                  <Link to={dashboardPath} onClick={closeMobile} className="btn btn-primary" style={{ flex: 1, justifyContent: "center", color: "white" }}>
+                  <Link to={dashboardPath} onClick={closeMobile} className="btn btn-primary" style={{ flex: 1, justifyContent: "center", color: "white", borderRadius: "var(--radius-sm)" }}>
                     My Dashboard
                   </Link>
                 </div>
                 <button
+                  type="button"
                   className="btn"
                   onClick={() => { closeMobile(); onLogout(); navigate("/"); }}
-                  style={{ width: "100%", justifyContent: "center", background: "var(--bg-main)", color: "var(--accent)" }}
+                  style={{ width: "100%", justifyContent: "center", background: "var(--bg-main)", color: "var(--accent)", borderRadius: "var(--radius-sm)", fontWeight: 600 }}
                 >
                   Sign Out
                 </button>
               </div>
             )}
 
-            <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "0" }} />
+            <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "4px 0" }} />
 
             {/* Navigation Links */}
-            <Link to="/browse" onClick={closeMobile} style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)", padding: "4px 0" }}>
+            <Link to="/browse" onClick={closeMobile} className="mobile-nav-item">
               Browse Questions
             </Link>
-            <Link to="/about" onClick={closeMobile} style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)", padding: "4px 0" }}>
+            <Link to="/knowledge-hub" onClick={closeMobile} className="mobile-nav-item">
+              Knowledge Hub
+            </Link>
+            <Link to="/about" onClick={closeMobile} className="mobile-nav-item">
               About Us
             </Link>
-            <Link to="/contact" onClick={closeMobile} style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)", padding: "4px 0" }}>
+            <Link to="/contact" onClick={closeMobile} className="mobile-nav-item">
               Contact Us
             </Link>
-            <Link to="/wellness" onClick={closeMobile} style={{ fontSize: "16px", fontWeight: 600, color: "var(--text-primary)", padding: "4px 0" }}>
+            <Link to="/wellness" onClick={closeMobile} className="mobile-nav-item">
               Wellness Center
             </Link>
-            <Link to="/ai-assistant" onClick={closeMobile} style={{ fontSize: "16px", fontWeight: 600, color: "var(--primary)", padding: "4px 0", display: "flex", alignItems: "center", gap: 6 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+            <Link to="/ai-assistant" onClick={closeMobile} className="mobile-nav-item ai-mobile-link">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
               AI Study Assistant
             </Link>
           </div>
@@ -235,7 +246,50 @@ export default function Navbar({ user, onLogout }) {
       )}
 
       <style>{`
-        @media (max-width: 768px) {
+        .nav-item-link {
+          color: var(--text-secondary);
+          font-weight: 500;
+          font-size: 14px;
+          padding: 6px 12px;
+          border-radius: 99px;
+          transition: all 0.2s;
+          white-space: nowrap;
+          word-break: keep-all;
+          overflow-wrap: normal;
+          display: inline-flex;
+          align-items: center;
+        }
+        .nav-item-link:hover {
+          background: var(--primary-light);
+          color: var(--primary);
+        }
+        .nav-item-link.ai-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .mobile-nav-item {
+          font-size: 16px;
+          font-weight: 600;
+          color: var(--text-primary);
+          padding: 8px 12px;
+          border-radius: var(--radius-sm);
+          transition: background 0.2s, color 0.2s;
+          white-space: nowrap;
+          word-break: keep-all;
+          overflow-wrap: normal;
+          display: flex;
+          align-items: center;
+        }
+        .mobile-nav-item:hover {
+          background: var(--bg-main);
+          color: var(--primary);
+        }
+        .mobile-nav-item.ai-mobile-link {
+          color: var(--primary);
+          gap: 8px;
+        }
+        @media (max-width: 1024px) {
           .desktop-only {
             display: none !important;
           }
@@ -247,4 +301,3 @@ export default function Navbar({ user, onLogout }) {
     </nav>
   );
 }
-
