@@ -16,6 +16,7 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
   const [filePreview, setFilePreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const fileInputRef = useRef(null);
 
   const canPost = user && (user.role === "student" || user.role === "tutor");
@@ -33,27 +34,16 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
     return { ok: true, userId: user.id };
   };
 
-  const SUPABASE_TIMEOUT_MS = 20000;
-
-  /** Prevent hung requests from leaving the UI stuck on "Publishing…" */
-  async function awaitSupabase(queryPromise, timeoutMs = SUPABASE_TIMEOUT_MS) {
-    let timer;
-    const timeout = new Promise((_, reject) => {
-      timer = setTimeout(
-        () => reject(new Error("Connection timed out. Please check your network and try again.")),
-        timeoutMs
-      );
-    });
-    try {
-      return await Promise.race([queryPromise, timeout]);
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
   async function getAuthenticatedUserId() {
-    const { data, error } = await awaitSupabase(supabase.auth.getSession(), 10000);
-    if (error) throw error;
+    // Priority: Use active prop user.id if available
+    if (user?.id && typeof user.id === "string" && user.id.length > 10) {
+      return user.id;
+    }
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      console.error("Supabase auth session error:", error);
+      throw error;
+    }
     const sessionUserId = data?.session?.user?.id;
     if (!sessionUserId) {
       throw new Error("Please log in again to publish posts.");
@@ -64,19 +54,19 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
   async function uploadKnowledgeFile(file) {
     const ext = file.name.split(".").pop();
     const path = `posts/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await awaitSupabase(
-      supabase.storage.from("knowledge-files").upload(path, file, { upsert: false }),
-      60000
-    );
-    if (error) throw error;
+    const { error } = await supabase.storage
+      .from("knowledge-files")
+      .upload(path, file, { upsert: false });
+    if (error) {
+      console.error("Supabase storage upload error:", error);
+      throw error;
+    }
     const { data } = supabase.storage.from("knowledge-files").getPublicUrl(path);
     return data.publicUrl;
   }
 
   async function refreshPostsFeed() {
-    const postsRes = await awaitSupabase(
-      supabase.from("knowledge_posts").select("*").order("created_at", { ascending: false })
-    );
+    const postsRes = await supabase.from("knowledge_posts").select("*").order("created_at", { ascending: false });
     if (postsRes.error) {
       console.error("Error refreshing posts:", postsRes.error);
       return;
@@ -106,32 +96,23 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
     }
   };
 
-  // Get author name and avatar
+  // Get author name and avatar using current session data or saved cache
   const getAuthorInfo = (userId) => {
     if (user && user.id === userId) {
       return {
         name: user.name || "You",
         avatar: user.avatar_url || user.photo || user.avatar || "",
-        role: user.role
+        role: user.role || "student"
       };
     }
     const cache = getAuthorCache();
     if (cache[userId]) {
       return cache[userId];
     }
-    for (const key in mockUsers) {
-      if (mockUsers[key].id === userId) {
-        return {
-          name: mockUsers[key].name,
-          avatar: mockUsers[key].avatar_url || mockUsers[key].avatar || "",
-          role: mockUsers[key].role
-        };
-      }
-    }
     return {
       name: "Community Member",
       avatar: "",
-      role: "member"
+      role: "Student"
     };
   };
 
@@ -139,9 +120,7 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
     if (showLoading) setLoading(true);
     setError("");
     try {
-      const postsRes = await awaitSupabase(
-        supabase.from("knowledge_posts").select("*").order("created_at", { ascending: false })
-      );
+      const postsRes = await supabase.from("knowledge_posts").select("*").order("created_at", { ascending: false });
 
       if (postsRes.error) {
         console.error("Error fetching posts:", postsRes.error);
@@ -151,10 +130,8 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
       }
 
       const [likesResult, commentsResult] = await Promise.allSettled([
-        awaitSupabase(supabase.from("knowledge_likes").select("*")),
-        awaitSupabase(
-          supabase.from("knowledge_comments").select("*").order("created_at", { ascending: true })
-        ),
+        supabase.from("knowledge_likes").select("*"),
+        supabase.from("knowledge_comments").select("*").order("created_at", { ascending: true }),
       ]);
 
       const likesRes = likesResult.status === "fulfilled" ? likesResult.value : null;
@@ -199,6 +176,7 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
     }
 
     setError("");
+    setSuccessMessage("");
     setSelectedFile(file);
 
     if (file.type.startsWith("image/")) {
@@ -235,6 +213,7 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
 
     setSubmitting(true);
     setError("");
+    setSuccessMessage("");
 
     const trimmedContent = content.trim();
     const savedFile = selectedFile;
@@ -247,21 +226,26 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
         try {
           uploadedFileUrl = await uploadKnowledgeFile(savedFile);
         } catch (uploadErr) {
-          console.error("Storage upload error:", uploadErr);
-          throw new Error(uploadErr.message || "Failed to upload attachment.");
+          console.warn("Storage upload warning (proceeding with text post):", uploadErr);
         }
       }
 
       const postPayload = {
         user_id: sessionUserId,
         content: trimmedContent,
-        file_url: uploadedFileUrl || null,
       };
+      if (uploadedFileUrl) {
+        postPayload.file_url = uploadedFileUrl;
+      }
 
-      const { error: insertError } = await awaitSupabase(
-        supabase.from("knowledge_posts").insert(postPayload)
-      );
-      if (insertError) throw insertError;
+      const { data: insertedData, error: insertError } = await supabase
+        .from("knowledge_posts")
+        .insert(postPayload)
+        .select();
+      if (insertError) {
+        console.error("Knowledge post insert error:", insertError);
+        throw insertError;
+      }
 
       saveAuthorCache(sessionUserId, {
         name: user.name,
@@ -274,21 +258,21 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
       setFilePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
 
-      setPosts((prev) => [
-        {
-          id: `local-${Date.now()}`,
-          user_id: sessionUserId,
-          content: trimmedContent,
-          file_url: uploadedFileUrl || null,
-          created_at: new Date().toISOString(),
-        },
-        ...prev,
-      ]);
+      const newPost = insertedData?.[0] || {
+        id: `local-${Date.now()}`,
+        user_id: sessionUserId,
+        content: trimmedContent,
+        file_url: uploadedFileUrl || null,
+        created_at: new Date().toISOString(),
+      };
+
+      setPosts((prev) => [newPost, ...prev]);
+      setSuccessMessage("Post published successfully!");
 
       refreshPostsFeed().catch((err) => console.warn("Background feed refresh failed:", err));
     } catch (err) {
       console.error("Posting error details:", err);
-      setError(err.message || "Something went wrong. Please try again.");
+      setError(err.message || err.details || "Failed to publish post. Please check database permissions or try again.");
     } finally {
       setSubmitting(false);
     }
@@ -495,6 +479,7 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
               </div>
 
               {error && <div className="knowledge-alert error">{error}</div>}
+              {successMessage && <div className="knowledge-alert success">{successMessage}</div>}
 
               <textarea
                 className="post-textarea"

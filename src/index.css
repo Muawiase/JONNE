@@ -3484,6 +3484,12 @@ textarea.form-input { resize: vertical; min-height: 120px; line-height: 1.6; }
   border: 1px solid #FCA5A5;
 }
 
+.knowledge-alert.success {
+  background: #D1FAE5;
+  color: #065F46;
+  border: 1px solid #6EE7B7;
+}
+
 @media (max-width: 640px) {
   .knowledge-hero h1 { font-size: 28px; }
   .knowledge-hero { padding: 36px 0 40px; }
