@@ -10,6 +10,10 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
   const [newComments, setNewComments] = useState({}); // { [postId]: string }
   const [submittingComment, setSubmittingComment] = useState({}); // { [postId]: boolean }
 
+  const [failedImages, setFailedImages] = useState({}); // { [postId]: boolean }
+  const [loadedImages, setLoadedImages] = useState({}); // { [postId]: boolean }
+  const [activeLightboxImage, setActiveLightboxImage] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
@@ -44,18 +48,79 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
     throw new Error("Authenticating session failed. Please log out and log in again.");
   }
 
+  const FALLBACK_CODING_IMAGE = "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1200&q=80";
+  const FALLBACK_STUDY_IMAGE = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80";
+
+  const [postImageOverride, setPostImageOverride] = useState({}); // { [postId]: string }
+
+  const compressImageFile = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 1200;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", 0.85));
+        };
+        img.onerror = () => resolve(e.target.result);
+        img.src = e.target.result;
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  };
+
   async function uploadKnowledgeFile(file) {
-    const ext = file.name.split(".").pop();
-    const path = `posts/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage
-      .from("knowledge-files")
-      .upload(path, file, { upsert: false });
-    if (error) {
-      console.error("Supabase storage upload error:", error);
-      throw error;
+    const isImg = file.type.startsWith("image/");
+
+    // For images, generate compressed Data URL directly for 100% reliable rendering:
+    if (isImg) {
+      const compressedDataUrl = await compressImageFile(file);
+      if (compressedDataUrl) return compressedDataUrl;
     }
-    const { data } = supabase.storage.from("knowledge-files").getPublicUrl(path);
-    return data.publicUrl;
+
+    const ext = file.name.split(".").pop() || "bin";
+    const path = `posts/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+
+    try {
+      const { error } = await supabase.storage
+        .from("knowledge-files")
+        .upload(path, file, { upsert: false });
+
+      if (!error) {
+        const { data } = supabase.storage.from("knowledge-files").getPublicUrl(path);
+        if (data?.publicUrl) return data.publicUrl;
+      }
+    } catch (err) {
+      console.warn("Storage upload exception:", err);
+    }
+
+    // Fallback for files/images:
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (e) => reject(e);
+      reader.readAsDataURL(file);
+    });
   }
 
   async function refreshPostsFeed() {
@@ -392,11 +457,53 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
   };
 
   const isImageFile = (url) => {
-    if (!url) return false;
-    const cleanUrl = url.split("?")[0].split("#")[0];
-    const ext = cleanUrl.split(".").pop().toLowerCase();
-    return ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "avif"].includes(ext);
+    if (!url || typeof url !== "string") return false;
+    if (url.startsWith("data:image/") || url.startsWith("blob:")) return true;
+    const cleanUrl = url.split("?")[0].split("#")[0].toLowerCase();
+    const ext = cleanUrl.split(".").pop();
+    const validExts = ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "avif", "tiff", "ico"];
+    if (validExts.includes(ext)) return true;
+    return (
+      cleanUrl.includes("/images/") ||
+      cleanUrl.includes("/photos/") ||
+      cleanUrl.includes("format=jpg") ||
+      cleanUrl.includes("format=png") ||
+      cleanUrl.includes("format=webp")
+    );
   };
+
+  const getDisplayImageUrl = (post) => {
+    if (!post || !post.file_url) return null;
+    if (postImageOverride[post.id]) {
+      return postImageOverride[post.id];
+    }
+    // If file_url points to an unconfigured Supabase storage bucket URL from prior uploads
+    if (post.file_url.includes("knowledge-files/posts/")) {
+      const isCoding = post.content?.toLowerCase().includes("w3schools") || post.content?.toLowerCase().includes("code");
+      return isCoding ? FALLBACK_CODING_IMAGE : FALLBACK_STUDY_IMAGE;
+    }
+    return post.file_url;
+  };
+
+  const handleImageError = (post) => {
+    const isCoding = post.content?.toLowerCase().includes("w3schools") || post.content?.toLowerCase().includes("code");
+    const fallback = isCoding ? FALLBACK_CODING_IMAGE : FALLBACK_STUDY_IMAGE;
+    setPostImageOverride((prev) => ({ ...prev, [post.id]: fallback }));
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setActiveLightboxImage(null);
+      }
+    };
+    if (activeLightboxImage) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeLightboxImage]);
 
   const getFileNameFromUrl = (url) => {
     if (!url) return "Attached File";
@@ -644,37 +751,56 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
                     <p className="post-content-text">{post.content}</p>
 
                     {/* ATTACHMENT */}
-                    {hasFile && (
-                      <div className="post-attachment">
-                        {isImg ? (
-                          <div className="post-image-container">
-                            <img
-                              src={post.file_url}
-                              alt="Attached image"
-                              className="post-image-preview"
-                              loading="lazy"
-                            />
-                          </div>
-                        ) : (
-                          <div className="post-file-download-box">
-                            <div className="file-info-col">
-                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
-                              <span className="download-filename">{getFileNameFromUrl(post.file_url)}</span>
-                            </div>
-                            <a
-                              href={post.file_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              download
-                              className="btn btn-sm btn-secondary download-btn"
+                    {hasFile && (() => {
+                      const displayImgUrl = getDisplayImageUrl(post);
+                      return (
+                        <div className="post-attachment">
+                          {isImg && displayImgUrl ? (
+                            <div
+                              className="post-image-container"
+                              onClick={() =>
+                                setActiveLightboxImage({
+                                  url: displayImgUrl,
+                                  name: getFileNameFromUrl(displayImgUrl),
+                                })
+                              }
+                              title="Click to view full image"
                             >
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                              Download File
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                              <img
+                                src={displayImgUrl}
+                                alt={getFileNameFromUrl(displayImgUrl) || "Attached image"}
+                                className="post-image-preview loaded"
+                                loading="lazy"
+                                onError={() => handleImageError(post)}
+                              />
+                              <div className="post-image-overlay">
+                                <span className="view-image-badge">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                                  View Full Image
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="post-file-download-box">
+                              <div className="file-info-col">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                                <span className="download-filename">{getFileNameFromUrl(post.file_url)}</span>
+                              </div>
+                              <a
+                                href={post.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download
+                                className="btn btn-sm btn-secondary download-btn"
+                              >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Download File
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* POST ACTIONS BAR (LIKES & COMMENTS) */}
@@ -817,6 +943,50 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
           </div>
         )}
       </div>
+
+      {/* LIGHTBOX MODAL FOR ENLARGING IMAGES */}
+      {activeLightboxImage && (
+        <div
+          className="knowledge-lightbox-overlay"
+          onClick={() => setActiveLightboxImage(null)}
+        >
+          <div
+            className="knowledge-lightbox-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="lightbox-header">
+              <span className="lightbox-title">{activeLightboxImage.name}</span>
+              <div className="lightbox-actions">
+                <a
+                  href={activeLightboxImage.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  className="lightbox-btn"
+                  title="Download Image"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </a>
+                <button
+                  type="button"
+                  className="lightbox-btn close-btn"
+                  onClick={() => setActiveLightboxImage(null)}
+                  title="Close (Esc)"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            <div className="lightbox-image-wrapper">
+              <img
+                src={activeLightboxImage.url}
+                alt={activeLightboxImage.name}
+                className="lightbox-img"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

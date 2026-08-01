@@ -3360,21 +3360,241 @@ textarea.form-input { resize: vertical; min-height: 120px; line-height: 1.6; }
 }
 
 .post-image-container {
+  position: relative;
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--border);
-  background: var(--bg-main);
-  max-height: 480px;
+  background: radial-gradient(circle at center, rgba(99, 102, 241, 0.03) 0%, rgba(241, 245, 249, 0.6) 100%);
+  max-height: 500px;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.post-image-container:hover {
+  border-color: var(--primary);
+  box-shadow: 0 8px 24px -4px rgba(79, 70, 229, 0.12);
+  transform: translateY(-1px);
 }
 
 .post-image-preview {
   width: 100%;
-  max-height: 480px;
+  max-height: 500px;
   object-fit: contain;
   display: block;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.post-image-preview.loaded {
+  opacity: 1;
+}
+
+.image-loading-skeleton {
+  min-height: 220px;
+  background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.post-image-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.3);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.post-image-container:hover .post-image-overlay {
+  opacity: 1;
+}
+
+.view-image-badge {
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 99px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Image Error Box Fallback */
+.post-image-error-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: #FFFBEB;
+  border: 1px dashed #FCD34D;
+  border-radius: var(--radius-md);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.image-error-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.image-error-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #FEF3C7;
+  color: #D97706;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.image-error-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.image-error-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: #92400E;
+}
+
+.image-error-subtitle {
+  font-size: 12px;
+  color: #B45309;
+}
+
+.image-error-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.error-retry-btn, .error-open-btn {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 99px;
+}
+
+/* LIGHTBOX MODAL */
+.knowledge-lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.2s ease;
+}
+
+.knowledge-lightbox-modal {
+  background: #1E293B;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  animation: zoomIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.lightbox-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: rgba(15, 23, 42, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 16px;
+}
+
+.lightbox-title {
+  color: #F8FAFC;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lightbox-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lightbox-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #F8FAFC;
+  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-decoration: none;
+}
+
+.lightbox-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.lightbox-btn.close-btn {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.lightbox-image-wrapper {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  background: #0F172A;
+}
+
+.lightbox-img {
+  max-width: 100%;
+  max-height: 75vh;
+  object-fit: contain;
+  border-radius: 8px;
 }
 
 .post-file-download-box {
