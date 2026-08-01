@@ -3,7 +3,14 @@ import { supabase } from "../supabase";
 import { mockUsers } from "../mockData";
 
 export default function KnowledgeHubPage({ user, onGuestAction }) {
-  const [posts, setPosts] = useState([]);
+  const [rawPosts, setRawPosts] = useState([]);
+  const [displayFeed, setDisplayFeed] = useState([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const rawPostsRef = useRef([]);
+  const displayFeedRef = useRef([]);
+  const isLoadingBatchRef = useRef(false);
+
   const [likesMap, setLikesMap] = useState({}); // { [postId]: [userIds] }
   const [commentsMap, setCommentsMap] = useState({}); // { [postId]: [commentObjs] }
   const [openComments, setOpenComments] = useState({}); // { [postId]: boolean }
@@ -24,6 +31,51 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
   const fileInputRef = useRef(null);
 
   const canPost = Boolean(user);
+
+  const BATCH_SIZE = 5;
+
+  const appendNextBatch = (count = BATCH_SIZE) => {
+    const currentRaw = rawPostsRef.current;
+    if (!currentRaw || currentRaw.length === 0) return;
+
+    setDisplayFeed((prevFeed) => {
+      const startIndex = prevFeed.length;
+      const newItems = [];
+      for (let i = 0; i < count; i++) {
+        const post = currentRaw[(startIndex + i) % currentRaw.length];
+        newItems.push({
+          post,
+          feedKey: `${post.id}-feed-${startIndex + i}`,
+        });
+      }
+      const updated = [...prevFeed, ...newItems];
+      displayFeedRef.current = updated;
+      return updated;
+    });
+  };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (isLoadingBatchRef.current || rawPostsRef.current.length === 0) return;
+
+      const scrollPosition = window.innerHeight + window.scrollY;
+      const threshold = document.documentElement.offsetHeight - 450;
+
+      if (scrollPosition >= threshold) {
+        isLoadingBatchRef.current = true;
+        setLoadingMore(true);
+
+        setTimeout(() => {
+          appendNextBatch(BATCH_SIZE);
+          setLoadingMore(false);
+          isLoadingBatchRef.current = false;
+        }, 300);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Session guard: check that user object is present
   const requireSupabaseUser = () => {
@@ -92,7 +144,6 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
   async function uploadKnowledgeFile(file) {
     const isImg = file.type.startsWith("image/");
 
-    // For images, generate compressed Data URL directly for 100% reliable rendering:
     if (isImg) {
       const compressedDataUrl = await compressImageFile(file);
       if (compressedDataUrl) return compressedDataUrl;
@@ -114,7 +165,6 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
       console.warn("Storage upload exception:", err);
     }
 
-    // Fallback for files/images:
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result);
@@ -129,7 +179,9 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
       console.error("Error refreshing posts:", postsRes.error);
       return;
     }
-    setPosts(postsRes.data || []);
+    const fetched = postsRes.data || [];
+    setRawPosts(fetched);
+    rawPostsRef.current = fetched;
   }
 
   // Helper to read cached author profiles
@@ -194,9 +246,30 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
 
       if (postsRes.error) {
         console.error("Error fetching posts:", postsRes.error);
-        setError(postsRes.error.message || "Could not load posts. Please try refreshing.");
+        if (showLoading) setError(postsRes.error.message || "Could not load posts. Please try refreshing.");
       } else {
-        setPosts(postsRes.data || []);
+        const fetched = postsRes.data || [];
+        setRawPosts(fetched);
+        rawPostsRef.current = fetched;
+
+        if (showLoading || displayFeedRef.current.length === 0) {
+          if (fetched.length > 0) {
+            const initCount = Math.min(Math.max(fetched.length, 5), 8);
+            const initialItems = [];
+            for (let i = 0; i < initCount; i++) {
+              const p = fetched[i % fetched.length];
+              initialItems.push({
+                post: p,
+                feedKey: `${p.id}-feed-${i}`,
+              });
+            }
+            setDisplayFeed(initialItems);
+            displayFeedRef.current = initialItems;
+          } else {
+            setDisplayFeed([]);
+            displayFeedRef.current = [];
+          }
+        }
       }
 
       const [likesResult, commentsResult] = await Promise.allSettled([
@@ -226,14 +299,20 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
       }
     } catch (err) {
       console.error("Unexpected error fetching data:", err);
-      setError(err.message || "An unexpected error occurred while loading feed.");
+      if (showLoading) setError(err.message || "An unexpected error occurred while loading feed.");
     } finally {
       if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPostsAndData();
+    fetchPostsAndData({ showLoading: true });
+
+    const interval = setInterval(() => {
+      fetchPostsAndData({ showLoading: false });
+    }, 45000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleFileSelect = (e) => {
@@ -336,7 +415,19 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
         created_at: new Date().toISOString(),
       };
 
-      setPosts((prev) => [newPost, ...prev]);
+      setRawPosts((prev) => {
+        const updated = [newPost, ...prev];
+        rawPostsRef.current = updated;
+        return updated;
+      });
+
+      setDisplayFeed((prev) => {
+        const newItem = { post: newPost, feedKey: `${newPost.id}-new-${Date.now()}` };
+        const updated = [newItem, ...prev];
+        displayFeedRef.current = updated;
+        return updated;
+      });
+
       setSuccessMessage("Post published successfully!");
 
       refreshPostsFeed().catch((err) => console.warn("Background feed refresh failed:", err));
@@ -696,14 +787,15 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
             <div className="spinner"></div>
             <p>Loading posts...</p>
           </div>
-        ) : posts.length === 0 ? (
+        ) : rawPosts.length === 0 ? (
           <div className="knowledge-card empty-state-card">
             <div className="empty-state-icon">📚</div>
             <p className="empty-state-text">No posts yet. Be the first to share something.</p>
           </div>
         ) : (
           <div className="posts-feed">
-            {posts.map((post) => {
+            {displayFeed.map((item) => {
+              const post = item.post;
               const author = getAuthorInfo(post.user_id);
               const hasFile = Boolean(post.file_url);
               const isImg = hasFile && isImageFile(post.file_url);
@@ -716,7 +808,7 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
               const isCommentsOpen = Boolean(openComments[post.id]);
 
               return (
-                <article key={post.id} className="knowledge-card post-card">
+                <article key={item.feedKey} className="knowledge-card post-card">
                   {/* POST AUTHOR HEADER */}
                   <header className="post-header">
                     <div className="author-avatar-wrapper">
@@ -937,9 +1029,14 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
                       </form>
                     </div>
                   )}
-                </article>
-              );
             })}
+
+            {loadingMore && (
+              <div className="infinite-scroll-loader">
+                <div className="spinner-sm primary"></div>
+                <span>Loading more posts...</span>
+              </div>
+            )}
           </div>
         )}
       </div>
