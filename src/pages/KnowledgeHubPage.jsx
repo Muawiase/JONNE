@@ -1029,7 +1029,10 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
                       </form>
                     </div>
                   )}
+                </article>
+              );
             })}
+
 
             {loadingMore && (
               <div className="infinite-scroll-loader">
