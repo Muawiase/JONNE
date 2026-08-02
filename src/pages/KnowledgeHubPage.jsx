@@ -3,6 +3,39 @@ import { supabase } from "../supabase";
 import { mockUsers } from "../mockData";
 import BackButton from "../components/BackButton";
 
+function TruncatedText({ text, maxLength = 220 }) {
+  const [expanded, setExpanded] = useState(false);
+  const safeText = text || "";
+  const shouldTruncate = safeText.length > maxLength;
+  const displayText = expanded || !shouldTruncate ? safeText : `${safeText.slice(0, maxLength)}...`;
+
+  if (!safeText) return null;
+
+  return (
+    <div>
+      <p className="post-content-text">{displayText}</p>
+      {shouldTruncate && (
+        <button
+          type="button"
+          onClick={() => setExpanded((prev) => !prev)}
+          style={{
+            background: "none",
+            border: "none",
+            padding: 0,
+            color: "var(--primary)",
+            fontWeight: 600,
+            fontSize: 13,
+            cursor: "pointer",
+            marginTop: 4,
+          }}
+        >
+          {expanded ? "Show less" : "Read more"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function KnowledgeHubPage({ user, onGuestAction }) {
   const [rawPosts, setRawPosts] = useState([]);
   const [displayFeed, setDisplayFeed] = useState([]);
@@ -842,7 +875,7 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
 
                   {/* POST CONTENT */}
                   <div className="post-body">
-                    <p className="post-content-text">{post.content}</p>
+                    <TruncatedText text={post.content} />
 
                     {/* ATTACHMENT */}
                     {hasFile && (() => {
