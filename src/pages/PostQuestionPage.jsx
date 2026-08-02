@@ -27,6 +27,7 @@ export default function PostQuestionPage({ user }) {
   const [form, setForm] = useState({
     title: "",
     subjectId: "",   // DB id of selected subject
+    subjectText: "",
     level: "",
     description: "",
     deadline: "",
@@ -95,10 +96,12 @@ export default function PostQuestionPage({ user }) {
         setUploading(false);
       }
 
+      const subjectValue = form.subjectText || (selectedSubject ? selectedSubject.name : "");
+
       const { error: insertError } = await supabase.from("questions").insert({
         user_id: user.id,
         title: form.title,
-        subject: selectedSubject ? selectedSubject.name : "", // New schema expects text
+        subject: subjectValue,
         level: form.level,
         description: form.description,
         deadline: form.deadline || null,
@@ -176,19 +179,23 @@ export default function PostQuestionPage({ user }) {
                             <option>Loading subjects…</option>
                           </select>
                         ) : (
-                          <select
-                            className="form-input"
-                            value={form.subjectId}
-                            onChange={(e) => set("subjectId", e.target.value)}
-                            required
-                          >
-                            <option value="">Select a subject…</option>
-                            {dbSubjects.map((s) => (
-                              <option key={s.id} value={s.id}>
-                                {s.name}
-                              </option>
-                            ))}
-                          </select>
+                          <>
+                            <input
+                              className="form-input"
+                              type="text"
+                              list="subject-options"
+                              placeholder="Type a subject or choose from the list…"
+                              value={form.subjectText}
+                              onChange={(e) => set("subjectText", e.target.value)}
+                              required
+                            />
+                            <datalist id="subject-options">
+                              {dbSubjects.map((s) => (
+                                <option key={s.id} value={s.name} />
+                              ))}
+                            </datalist>
+                            <p className="form-hint">Type any subject you need — if it isn’t listed, enter it manually.</p>
+                          </>
                         )}
                       </div>
                       <div className="form-group">

@@ -458,19 +458,13 @@ export const subjects = [
 ];
 
 export const educationLevels = [
-  "Primary School",
-  "High School — Grade 7",
-  "High School — Grade 8",
-  "High School — Grade 9",
-  "High School — Grade 10",
-  "High School — Grade 11",
-  "High School — Grade 12",
-  "High School — Grade 13 / A-Level",
-  "University — Year 1",
-  "University — Year 2",
-  "University — Year 3",
-  "University — Year 4+",
-  "Adult Learner",
+  "Primary",
+  "O-Level",
+  "A-Level",
+  "Certificate",
+  "Diploma",
+  "Bachelor's",
+  "Postgraduate",
+  "Professional",
   "Self-Learner",
-  "Certificate / Diploma Program",
 ];
