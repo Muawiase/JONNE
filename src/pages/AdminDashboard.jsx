@@ -7,6 +7,19 @@ import {
   mockReports as initialReports
 } from "../mockData";
 import { supabase } from "../supabase";
+import {
+  LayoutDashboard,
+  Users,
+  HelpCircle,
+  FolderTree,
+  CreditCard,
+  Star,
+  Flag,
+  Settings,
+  Plus,
+  Ban,
+  UserCheck
+} from "lucide-react";
 
 // Expanded initial users list for the management screen
 const initialUsers = [
@@ -228,14 +241,14 @@ export default function AdminDashboard({ user }) {
   const [questionStatusFilter, setQuestionStatusFilter] = useState("all");
 
   const NAV_ITEMS = [
-    { id: "dashboard", label: "Dashboard", icon: "" },
-    { id: "users", label: "Manage Users", icon: "", badge: users.filter(u => u.status === "Banned").length },
-    { id: "questions", label: "Questions", icon: "" },
-    { id: "categories", label: "Categories", icon: "" },
-    { id: "payments", label: "Payments", icon: "" },
-    { id: "reviews", label: "Reviews", icon: "" },
-    { id: "reports", label: "Reports", icon: "", badge: reports.filter(r => r.status === "pending").length },
-    { id: "settings", label: "Settings", icon: "" }
+    { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
+    { id: "users", label: "Manage Users", icon: <Users size={18} />, badge: users.filter(u => u.status === "Banned").length },
+    { id: "questions", label: "Questions", icon: <HelpCircle size={18} /> },
+    { id: "categories", label: "Categories", icon: <FolderTree size={18} /> },
+    { id: "payments", label: "Payments", icon: <CreditCard size={18} /> },
+    { id: "reviews", label: "Reviews", icon: <Star size={18} /> },
+    { id: "reports", label: "Reports", icon: <Flag size={18} />, badge: reports.filter(r => r.status === "pending").length },
+    { id: "settings", label: "Settings", icon: <Settings size={18} /> }
   ];
 
   return (
@@ -510,12 +523,12 @@ export default function AdminDashboard({ user }) {
               {/* Stats Grid */}
               <div className="sd-stats-grid">
                 {[
-                  { icon: "", num: users.length, label: "Total Users", color: "#2980b9", sub: `${users.filter(u => u.role === "tutor").length} Tutors, ${users.filter(u => u.role === "student").length} Students` },
-                  { icon: "", num: questions.length, label: "Total Questions", color: "#27ae60", sub: `${questions.filter(q => q.status === "open").length} Open questions` },
-                  { icon: "", num: categories.length, label: "Categories", color: "#8e44ad", sub: "Active academic topics" },
-                  { icon: "", num: `$${transactions.reduce((acc, t) => t.status === "completed" ? acc + t.amount : acc, 0)}`, label: "Gross Volume", color: "#f39c12", sub: "Successful transactions" },
-                  { icon: "", num: reports.filter(r => r.status === "pending").length, label: "Pending Reports", color: "#c0392b", sub: "Requires admin review" },
-                  { icon: "", num: reviews.length, label: "Moderated Reviews", color: "#1abc9c", sub: "Tutor feedback items" }
+                  { icon: <Users size={20} />, num: users.length, label: "Total Users", color: "#2980b9", sub: `${users.filter(u => u.role === "tutor").length} Tutors, ${users.filter(u => u.role === "student").length} Students` },
+                  { icon: <HelpCircle size={20} />, num: questions.length, label: "Total Questions", color: "#27ae60", sub: `${questions.filter(q => q.status === "open").length} Open questions` },
+                  { icon: <FolderTree size={20} />, num: categories.length, label: "Categories", color: "#8e44ad", sub: "Active academic topics" },
+                  { icon: <CreditCard size={20} />, num: `$${transactions.reduce((acc, t) => t.status === "completed" ? acc + t.amount : acc, 0)}`, label: "Gross Volume", color: "#f39c12", sub: "Successful transactions" },
+                  { icon: <Flag size={20} />, num: reports.filter(r => r.status === "pending").length, label: "Pending Reports", color: "#c0392b", sub: "Requires admin review" },
+                  { icon: <Star size={20} />, num: reviews.length, label: "Moderated Reviews", color: "#1abc9c", sub: "Tutor feedback items" }
                 ].map((s, idx) => (
                   <div className="sd-stat-card" key={idx} style={{ "--accent-color": s.color }}>
                     <div className="sd-stat-icon" style={{ background: s.color + "18", color: s.color }}>{s.icon}</div>
@@ -636,8 +649,9 @@ export default function AdminDashboard({ user }) {
                     <option value="admin">Admins</option>
                   </select>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowAddUser(true)}>
-                   Add User
+                <button className="btn btn-primary" onClick={() => setShowAddUser(true)} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <Plus size={16} />
+                  Add User
                 </button>
               </div>
 
@@ -684,7 +698,9 @@ export default function AdminDashboard({ user }) {
                               <button
                                 className={`btn-table ${u.status === "Active" ? "btn-danger" : "btn-success-solid"}`}
                                 onClick={() => handleToggleBan(u.id)}
+                                style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
                               >
+                                {u.status === "Active" ? <Ban size={12} /> : <UserCheck size={12} />}
                                 {u.status === "Active" ? " Ban" : " Unban"}
                               </button>
                               <select

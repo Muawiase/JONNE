@@ -1,5 +1,20 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
+import {
+  Compass,
+  BookOpen,
+  Info,
+  Mail,
+  HeartPulse,
+  Sparkles,
+  PlusCircle,
+  LayoutDashboard,
+  LogOut,
+  LogIn,
+  UserPlus,
+  Menu,
+  X
+} from "lucide-react";
 
 const getInitials = (name) => {
   if (!name) return "";
@@ -43,13 +58,28 @@ export default function Navbar({ user, onLogout }) {
 
         {/* Desktop Navigation Links */}
         <div className="navbar-links desktop-only" style={{ display: "flex", alignItems: "center", gap: "12px", whiteSpace: "nowrap" }}>
-          <Link to="/browse" className="nav-item-link">Browse</Link>
-          <Link to="/knowledge-hub" className="nav-item-link">Knowledge Hub</Link>
-          <Link to="/about" className="nav-item-link">About</Link>
-          <Link to="/contact" className="nav-item-link">Contact</Link>
-          <Link to="/wellness" className="nav-item-link">Wellness</Link>
-          <Link to="/ai-assistant" className="nav-item-link ai-link">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+          <Link to="/browse" className="nav-item-link" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <Compass size={16} />
+            Browse
+          </Link>
+          <Link to="/knowledge-hub" className="nav-item-link" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <BookOpen size={16} />
+            Knowledge Hub
+          </Link>
+          <Link to="/about" className="nav-item-link" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <Info size={16} />
+            About
+          </Link>
+          <Link to="/contact" className="nav-item-link" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <Mail size={16} />
+            Contact
+          </Link>
+          <Link to="/wellness" className="nav-item-link" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <HeartPulse size={16} />
+            Wellness
+          </Link>
+          <Link to="/ai-assistant" className="nav-item-link ai-link" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <Sparkles size={16} />
             AI Assistant
           </Link>
 
@@ -58,11 +88,13 @@ export default function Navbar({ user, onLogout }) {
           {user ? (
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
               {user.role === "student" && (
-                <Link to="/post" className="btn btn-sm btn-secondary" style={{ borderRadius: "var(--radius-sm)", whiteSpace: "nowrap" }}>
+                <Link to="/post" className="btn btn-sm btn-secondary" style={{ borderRadius: "var(--radius-sm)", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <PlusCircle size={14} />
                   Post Question
                 </Link>
               )}
-              <Link to={dashboardPath} style={{ fontWeight: 600, color: "var(--primary)", whiteSpace: "nowrap", fontSize: "14px", padding: "6px 10px" }}>
+              <Link to={dashboardPath} style={{ fontWeight: 600, color: "var(--primary)", whiteSpace: "nowrap", fontSize: "14px", padding: "6px 10px", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <LayoutDashboard size={14} />
                 Dashboard
               </Link>
               <div className="navbar-user" style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -82,14 +114,16 @@ export default function Navbar({ user, onLogout }) {
                   type="button"
                   className="btn btn-sm"
                   onClick={() => { onLogout(); navigate("/"); }}
-                  style={{ background: "transparent", color: "var(--accent)", fontWeight: 600, padding: "4px 8px", whiteSpace: "nowrap" }}
+                  style={{ background: "transparent", color: "var(--accent)", fontWeight: 600, padding: "4px 8px", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
+                  <LogOut size={14} />
                   Sign Out
                 </button>
               </div>
             </div>
           ) : (
-            <Link to="/login" className="btn btn-sm btn-primary nav-cta" style={{ borderRadius: "99px", whiteSpace: "nowrap" }}>
+            <Link to="/login" className="btn btn-sm btn-primary nav-cta" style={{ borderRadius: "99px", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <LogIn size={14} />
               Log In / Sign Up
             </Link>
           )}
@@ -116,7 +150,7 @@ export default function Navbar({ user, onLogout }) {
           aria-label="Toggle navigation menu"
           aria-expanded={mobileOpen}
         >
-          {mobileOpen ? "✕" : "☰"}
+          {mobileOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
 
@@ -165,16 +199,18 @@ export default function Navbar({ user, onLogout }) {
                   to="/login"
                   onClick={closeMobile}
                   className="btn btn-primary"
-                  style={{ flex: 1, justifyContent: "center", color: "white", textAlign: "center", borderRadius: "99px" }}
+                  style={{ flex: 1, justifyContent: "center", color: "white", textAlign: "center", borderRadius: "99px", display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
+                  <LogIn size={16} />
                   Log In
                 </Link>
                 <Link
                   to="/login"
                   onClick={closeMobile}
                   className="btn btn-secondary"
-                  style={{ flex: 1, justifyContent: "center", textAlign: "center", borderRadius: "99px" }}
+                  style={{ flex: 1, justifyContent: "center", textAlign: "center", borderRadius: "99px", display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
+                  <UserPlus size={16} />
                   Sign Up
                 </Link>
               </div>
@@ -200,11 +236,13 @@ export default function Navbar({ user, onLogout }) {
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
                   {user.role === "student" && (
-                    <Link to="/post" onClick={closeMobile} className="btn btn-secondary" style={{ flex: 1, justifyContent: "center", borderRadius: "var(--radius-sm)" }}>
+                    <Link to="/post" onClick={closeMobile} className="btn btn-secondary" style={{ flex: 1, justifyContent: "center", borderRadius: "var(--radius-sm)", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                      <PlusCircle size={16} />
                       Post Question
                     </Link>
                   )}
-                  <Link to={dashboardPath} onClick={closeMobile} className="btn btn-primary" style={{ flex: 1, justifyContent: "center", color: "white", borderRadius: "var(--radius-sm)" }}>
+                  <Link to={dashboardPath} onClick={closeMobile} className="btn btn-primary" style={{ flex: 1, justifyContent: "center", color: "white", borderRadius: "var(--radius-sm)", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                    <LayoutDashboard size={16} />
                     My Dashboard
                   </Link>
                 </div>
@@ -212,8 +250,9 @@ export default function Navbar({ user, onLogout }) {
                   type="button"
                   className="btn"
                   onClick={() => { closeMobile(); onLogout(); navigate("/"); }}
-                  style={{ width: "100%", justifyContent: "center", background: "var(--bg-main)", color: "var(--accent)", borderRadius: "var(--radius-sm)", fontWeight: 600 }}
+                  style={{ width: "100%", justifyContent: "center", background: "var(--bg-main)", color: "var(--accent)", borderRadius: "var(--radius-sm)", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
+                  <LogOut size={16} />
                   Sign Out
                 </button>
               </div>
@@ -222,23 +261,28 @@ export default function Navbar({ user, onLogout }) {
             <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "4px 0" }} />
 
             {/* Navigation Links */}
-            <Link to="/browse" onClick={closeMobile} className="mobile-nav-item">
+            <Link to="/browse" onClick={closeMobile} className="mobile-nav-item" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <Compass size={18} />
               Browse Questions
             </Link>
-            <Link to="/knowledge-hub" onClick={closeMobile} className="mobile-nav-item">
+            <Link to="/knowledge-hub" onClick={closeMobile} className="mobile-nav-item" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <BookOpen size={18} />
               Knowledge Hub
             </Link>
-            <Link to="/about" onClick={closeMobile} className="mobile-nav-item">
+            <Link to="/about" onClick={closeMobile} className="mobile-nav-item" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <Info size={18} />
               About Us
             </Link>
-            <Link to="/contact" onClick={closeMobile} className="mobile-nav-item">
+            <Link to="/contact" onClick={closeMobile} className="mobile-nav-item" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <Mail size={18} />
               Contact Us
             </Link>
-            <Link to="/wellness" onClick={closeMobile} className="mobile-nav-item">
+            <Link to="/wellness" onClick={closeMobile} className="mobile-nav-item" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <HeartPulse size={18} />
               Wellness Center
             </Link>
-            <Link to="/ai-assistant" onClick={closeMobile} className="mobile-nav-item ai-mobile-link">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+            <Link to="/ai-assistant" onClick={closeMobile} className="mobile-nav-item ai-mobile-link" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <Sparkles size={18} />
               AI Study Assistant
             </Link>
           </div>

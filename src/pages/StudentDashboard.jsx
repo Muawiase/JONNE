@@ -1,6 +1,27 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../supabase";
+import {
+  LayoutDashboard,
+  PlusCircle,
+  HelpCircle,
+  FileText,
+  CreditCard,
+  Download,
+  Bell,
+  User,
+  Clock,
+  CheckCircle2,
+  ArrowRight,
+  Upload,
+  X,
+  Calendar,
+  Video,
+  Camera,
+  Trash2,
+  Edit,
+  Save
+} from "lucide-react";
 
 //  MOCK DATA 
 const initialMockBids = [
@@ -211,20 +232,20 @@ const mockNotifications = [
 ];
 
 const statusConfig = {
-  open: { label: "Open", cls: "status-open", icon: "", color: "#4CAF50" },
-  "in-progress": { label: "In Progress", cls: "status-in-progress", icon: "", color: "#FF9800" },
-  solved: { label: "Solved", cls: "status-solved", icon: "", color: "#2196F3" },
+  open: { label: "Open", cls: "status-open", icon: <HelpCircle size={12} style={{ marginRight: 4 }} />, color: "#4CAF50" },
+  "in-progress": { label: "In Progress", cls: "status-in-progress", icon: <Clock size={12} style={{ marginRight: 4 }} />, color: "#FF9800" },
+  solved: { label: "Solved", cls: "status-solved", icon: <CheckCircle2 size={12} style={{ marginRight: 4 }} />, color: "#2196F3" },
 };
 
 const buildNavItems = (pendingBidsCount, unreadNotifsCount) => [
-  { id: "dashboard", label: "Dashboard", icon: "" },
-  { id: "post", label: "Post Question", icon: "" },
-  { id: "my-questions", label: "My Questions", icon: "" },
-  { id: "bids", label: "Bids", icon: "", badge: pendingBidsCount },
-  { id: "payments", label: "Payments", icon: "" },
-  { id: "downloads", label: "Downloads", icon: "" },
-  { id: "notifications", label: "Notifications", icon: "", badge: unreadNotifsCount },
-  { id: "profile", label: "Profile", icon: "" },
+  { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
+  { id: "post", label: "Post Question", icon: <PlusCircle size={18} /> },
+  { id: "my-questions", label: "My Questions", icon: <HelpCircle size={18} /> },
+  { id: "bids", label: "Bids", icon: <FileText size={18} />, badge: pendingBidsCount },
+  { id: "payments", label: "Payments", icon: <CreditCard size={18} /> },
+  { id: "downloads", label: "Downloads", icon: <Download size={18} /> },
+  { id: "notifications", label: "Notifications", icon: <Bell size={18} />, badge: unreadNotifsCount },
+  { id: "profile", label: "Profile", icon: <User size={18} /> },
 ];
 
 //  SECTIONS 
@@ -255,20 +276,21 @@ function DashboardHome({ user, setActive, myQuestions, loading, bids, notificati
           <h1> Welcome back, {firstName}!</h1>
           <p>Track your questions, manage bids, and stay on top of your learning journey.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setActive("post")}>
-           Post a Question
+        <button className="btn btn-primary" onClick={() => setActive("post")} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          <PlusCircle size={16} />
+          Post a Question
         </button>
       </div>
 
       {/* Stats Row */}
       <div className="sd-stats-grid">
         {[
-          { icon: "", num: renderStatNum(myQuestions.length), label: "Total Questions", color: "#6C63FF", onClick: () => setActive("my-questions") },
-          { icon: "", num: renderStatNum(open.length), label: "Open", color: "#4CAF50", onClick: () => setActive("my-questions") },
-          { icon: "", num: renderStatNum(inProgress.length), label: "In Progress", color: "#FF9800", onClick: () => setActive("my-questions") },
-          { icon: "", num: renderStatNum(solved.length), label: "Solved", color: "#2196F3", onClick: () => setActive("my-questions") },
-          { icon: "", num: renderStatNum(bids.length), label: "Total Bids", color: "#E91E63", onClick: () => setActive("bids") },
-          { icon: "", num: renderStatNum(unread), label: "Unread Alerts", color: "#FF5722", onClick: () => setActive("notifications") },
+          { icon: <HelpCircle size={20} />, num: renderStatNum(myQuestions.length), label: "Total Questions", color: "#6C63FF", onClick: () => setActive("my-questions") },
+          { icon: <HelpCircle size={20} />, num: renderStatNum(open.length), label: "Open", color: "#4CAF50", onClick: () => setActive("my-questions") },
+          { icon: <Clock size={20} />, num: renderStatNum(inProgress.length), label: "In Progress", color: "#FF9800", onClick: () => setActive("my-questions") },
+          { icon: <CheckCircle2 size={20} />, num: renderStatNum(solved.length), label: "Solved", color: "#2196F3", onClick: () => setActive("my-questions") },
+          { icon: <FileText size={20} />, num: renderStatNum(bids.length), label: "Total Bids", color: "#E91E63", onClick: () => setActive("bids") },
+          { icon: <Bell size={20} />, num: renderStatNum(unread), label: "Unread Alerts", color: "#FF5722", onClick: () => setActive("notifications") },
         ].map((s) => (
           <div className="sd-stat-card" key={s.label} onClick={s.onClick} style={{ "--accent-color": s.color }}>
             <div className="sd-stat-icon" style={{ background: s.color + "18", color: s.color }}>{s.icon}</div>
@@ -282,7 +304,9 @@ function DashboardHome({ user, setActive, myQuestions, loading, bids, notificati
       <div className="sd-widget">
         <div className="sd-widget-header">
           <h2> Recent Questions</h2>
-          <button className="sd-link-btn" onClick={() => setActive("my-questions")}>View all →</button>
+          <button className="sd-link-btn" onClick={() => setActive("my-questions")} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+            View all <ArrowRight size={14} />
+          </button>
         </div>
         <div className="sd-list">
           {loading ? (
@@ -318,7 +342,11 @@ function DashboardHome({ user, setActive, myQuestions, loading, bids, notificati
                       <span> Due {new Date(q.deadline).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
                     </div>
                   </div>
-                  <Link to={`/question/${q.id}`}><button className="btn btn-sm btn-secondary">View →</button></Link>
+                  <Link to={`/question/${q.id}`} style={{ display: "inline-flex" }}>
+                    <button className="btn btn-sm btn-secondary" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                      View <ArrowRight size={14} />
+                    </button>
+                  </Link>
                 </div>
               );
             })
@@ -330,19 +358,28 @@ function DashboardHome({ user, setActive, myQuestions, loading, bids, notificati
       <div className="sd-widget">
         <div className="sd-widget-header">
           <h2> Recent Notifications</h2>
-          <button className="sd-link-btn" onClick={() => setActive("notifications")}>View all →</button>
+          <button className="sd-link-btn" onClick={() => setActive("notifications")} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+            View all <ArrowRight size={14} />
+          </button>
         </div>
         <div className="sd-list">
-          {notifications.slice(0, 3).map((n) => (
-            <div className="sd-list-item" key={n.id} style={{ opacity: n.read ? 0.65 : 1 }}>
-              <div className="sd-notif-icon" style={{ background: n.color + "18", color: n.color }}>{n.icon}</div>
-              <div className="sd-list-item-body">
-                <div className="sd-list-title" style={{ fontWeight: n.read ? 500 : 700 }}>{n.title}</div>
-                <div className="sd-list-meta"><span>{n.body}</span></div>
+          {notifications.slice(0, 3).map((n) => {
+            let notifIcon = <Bell size={18} />;
+            if (n.type === "bid") notifIcon = <FileText size={18} />;
+            else if (n.type === "payment") notifIcon = <CreditCard size={18} />;
+            else if (n.type === "download") notifIcon = <Download size={18} />;
+
+            return (
+              <div className="sd-list-item" key={n.id} style={{ opacity: n.read ? 0.65 : 1 }}>
+                <div className="sd-notif-icon" style={{ background: n.color + "18", color: n.color, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{notifIcon}</div>
+                <div className="sd-list-item-body">
+                  <div className="sd-list-title" style={{ fontWeight: n.read ? 500 : 700 }}>{n.title}</div>
+                  <div className="sd-list-meta"><span>{n.body}</span></div>
+                </div>
+                <span className="sd-time-chip">{n.time}</span>
               </div>
-              <span className="sd-time-chip">{n.time}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -535,8 +572,8 @@ function PostQuestionSection({ user, onPosted }) {
             {attachedFile ? (
               /* ── Attached state ── */
               <div className="sd-file-attached">
-                <span className="sd-file-icon">
-                  {attachedFile.name.endsWith(".pdf") ? "📄" : "📝"}
+                <span className="sd-file-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+                  <FileText size={18} />
                 </span>
                 <div className="sd-file-info">
                   <span className="sd-file-name">{attachedFile.name}</span>
@@ -549,8 +586,9 @@ function PostQuestionSection({ user, onPosted }) {
                   className="sd-file-remove"
                   title="Remove file"
                   onClick={() => { setAttachedFile(null); setFileError(""); }}
+                  style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                 >
-                  ✕
+                  <X size={14} />
                 </button>
               </div>
             ) : (
@@ -569,7 +607,9 @@ function PostQuestionSection({ user, onPosted }) {
                   style={{ display: "none" }}
                   onChange={(e) => handleFileChange(e.target.files[0])}
                 />
-                <span className="sd-upload-icon">📎</span>
+                <span className="sd-upload-icon" style={{ display: "inline-flex", alignItems: "center" }}>
+                  <Upload size={20} />
+                </span>
                 <span className="sd-upload-text">
                   <strong>Click to upload</strong> or drag &amp; drop
                 </span>
@@ -604,7 +644,8 @@ function PostQuestionSection({ user, onPosted }) {
             )}
           </div>
           <div className="sd-form-actions">
-            <button type="submit" className="btn btn-primary btn-lg" disabled={submitting}>
+            <button type="submit" className="btn btn-primary btn-lg" disabled={submitting} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <PlusCircle size={18} />
               {submitting ? "Submitting…" : "Submit Question"}
             </button>
           </div>
@@ -683,7 +724,11 @@ function MyQuestionsSection({ myQuestions, loading }) {
                       <span> {q.level}</span>
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <Link to={`/question/${q.id}`}><button className="btn btn-sm btn-primary">View →</button></Link>
+                      <Link to={`/question/${q.id}`} style={{ display: "inline-flex" }}>
+                        <button className="btn btn-sm btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                          View <ArrowRight size={14} />
+                        </button>
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -777,16 +822,24 @@ function BidsSection({ bids, setBids, notifications, setNotifications }) {
                   <button
                     className="btn btn-primary btn-sm"
                     onClick={(e) => { e.stopPropagation(); handleAccept(bid); }}
+                    style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
                   >
-                     Accept Bid
+                    <CheckCircle2 size={14} />
+                    Accept Bid
                   </button>
                   <button
                     className="btn btn-secondary btn-sm"
                     onClick={(e) => { e.stopPropagation(); handleDecline(bid.id); }}
+                    style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
                   >
-                     Decline
+                    <X size={14} />
+                    Decline
                   </button>
-                  <Link to={`/question/${bid.questionId}`}><button className="btn btn-sm" style={{ background: "#f5f5f5", color: "#404040" }}>View Q →</button></Link>
+                  <Link to={`/question/${bid.questionId}`} style={{ display: "inline-flex" }}>
+                    <button className="btn btn-sm" style={{ background: "#f5f5f5", color: "#404040", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                      View Q <ArrowRight size={14} />
+                    </button>
+                  </Link>
                 </div>
               </div>
             ))}
@@ -815,10 +868,14 @@ function BidsSection({ bids, setBids, notifications, setNotifications }) {
                    Chat is now open with {bid.tutor}!
                 </div>
                 <div className="sd-bid-actions">
-                  <Link to={`/question/${bid.questionId}`} className="btn btn-primary btn-sm">
-                     Open Chat
+                  <Link to={`/question/${bid.questionId}`} className="btn btn-primary btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    <MessageSquare size={14} />
+                    Open Chat
                   </Link>
-                  <button className="btn btn-secondary btn-sm"> Schedule Session</button>
+                  <button className="btn btn-secondary btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    <Calendar size={14} />
+                    Schedule Session
+                  </button>
                 </div>
               </div>
             ))}
@@ -869,9 +926,9 @@ function PaymentsSection() {
 
       <div className="sd-stats-grid">
         {[
-          { icon: "", num: `$${total}`, label: "Total Spent", color: "#4CAF50" },
-          { icon: "", num: mockPayments.filter((p) => p.status === "completed").length, label: "Completed", color: "#2196F3" },
-          { icon: "", num: mockPayments.filter((p) => p.status === "pending").length, label: "Pending", color: "#FF9800" },
+          { icon: <CreditCard size={20} />, num: `$${total}`, label: "Total Spent", color: "#4CAF50" },
+          { icon: <CheckCircle2 size={20} />, num: mockPayments.filter((p) => p.status === "completed").length, label: "Completed", color: "#2196F3" },
+          { icon: <Clock size={20} />, num: mockPayments.filter((p) => p.status === "pending").length, label: "Pending", color: "#FF9800" },
         ].map((s) => (
           <div className="sd-stat-card" key={s.label} style={{ "--accent-color": s.color }}>
             <div className="sd-stat-icon" style={{ background: s.color + "18", color: s.color }}>{s.icon}</div>
@@ -922,13 +979,18 @@ function PaymentsSection() {
         <div className="sd-widget-header"><h2> Saved Payment Method</h2></div>
         <div className="sd-payment-method">
           <div className="sd-card-chip">
-            <span className="sd-card-icon"></span>
+            <span className="sd-card-icon" style={{ display: "inline-flex", alignItems: "center", color: "var(--primary)" }}>
+              <CreditCard size={20} />
+            </span>
             <div>
               <div style={{ fontWeight: 700 }}>Visa •••• 4242</div>
               <div style={{ fontSize: 13, color: "var(--text-muted)" }}>Expires 09/28</div>
             </div>
           </div>
-          <button className="btn btn-secondary btn-sm">Change Card</button>
+          <button className="btn btn-secondary btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <CreditCard size={14} />
+            Change Card
+          </button>
         </div>
       </div>
     </div>
@@ -943,23 +1005,33 @@ function DownloadsSection() {
         <p>Access notes, recordings, and files shared by your tutors.</p>
       </div>
       <div className="sd-downloads-grid">
-        {mockDownloads.map((file) => (
-          <div className="sd-download-card" key={file.id}>
-            <div className="sd-download-icon" style={{ background: file.color + "18", color: file.color }}>{file.icon}</div>
-            <div className="sd-download-body">
-              <div className="sd-download-title">{file.title}</div>
-              <div className="sd-download-meta">
-                <span className="sd-pill" style={{ background: file.color + "18", color: file.color }}>{file.type}</span>
-                <span>{file.size}</span>
-                <span>by {file.tutor}</span>
+        {mockDownloads.map((file) => {
+          let fileIcon = <FileText size={20} />;
+          if (file.type === "MP4") fileIcon = <Video size={20} />;
+
+          return (
+            <div className="sd-download-card" key={file.id}>
+              <div className="sd-download-icon" style={{ background: file.color + "18", color: file.color, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                {fileIcon}
               </div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
-                 {new Date(file.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+              <div className="sd-download-body">
+                <div className="sd-download-title">{file.title}</div>
+                <div className="sd-download-meta">
+                  <span className="sd-pill" style={{ background: file.color + "18", color: file.color }}>{file.type}</span>
+                  <span>{file.size}</span>
+                  <span>by {file.tutor}</span>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
+                   {new Date(file.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                </div>
               </div>
+              <button className="btn btn-primary btn-sm sd-download-btn" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <Download size={14} />
+                Download
+              </button>
             </div>
-            <button className="btn btn-primary btn-sm sd-download-btn"> Download</button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -977,26 +1049,36 @@ function NotificationsSection({ notifications, setNotifications }) {
         <p>{unread > 0 ? `You have ${unread} unread notification${unread > 1 ? "s" : ""}.` : "You're all caught up!"}</p>
       </div>
       {unread > 0 && (
-        <button className="btn btn-secondary btn-sm" style={{ marginBottom: 20 }} onClick={markAllRead}>
-           Mark all as read
+        <button className="btn btn-secondary btn-sm" style={{ marginBottom: 20, display: "inline-flex", alignItems: "center", gap: "6px" }} onClick={markAllRead}>
+          <CheckCircle2 size={14} />
+          Mark all as read
         </button>
       )}
       <div className="sd-notif-list">
-        {notifications.map((n) => (
-          <div
-            className={`sd-notif-item ${!n.read ? "sd-notif-unread" : ""}`}
-            key={n.id}
-            onClick={() => setNotifications(notifications.map((x) => x.id === n.id ? { ...x, read: true } : x))}
-          >
-            <div className="sd-notif-icon-lg" style={{ background: n.color + "18", color: n.color }}>{n.icon}</div>
-            <div className="sd-notif-body">
-              <div className="sd-notif-title" style={{ fontWeight: n.read ? 500 : 700 }}>{n.title}</div>
-              <div className="sd-notif-text">{n.body}</div>
-              <div className="sd-notif-time">{n.time}</div>
+        {notifications.map((n) => {
+          let notifIcon = <Bell size={20} />;
+          if (n.type === "bid") notifIcon = <FileText size={20} />;
+          else if (n.type === "payment") notifIcon = <CreditCard size={20} />;
+          else if (n.type === "download") notifIcon = <Download size={20} />;
+
+          return (
+            <div
+              className={`sd-notif-item ${!n.read ? "sd-notif-unread" : ""}`}
+              key={n.id}
+              onClick={() => setNotifications(notifications.map((x) => x.id === n.id ? { ...x, read: true } : x))}
+            >
+              <div className="sd-notif-icon-lg" style={{ background: n.color + "18", color: n.color, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                {notifIcon}
+              </div>
+              <div className="sd-notif-body">
+                <div className="sd-notif-title" style={{ fontWeight: n.read ? 500 : 700 }}>{n.title}</div>
+                <div className="sd-notif-text">{n.body}</div>
+                <div className="sd-notif-time">{n.time}</div>
+              </div>
+              {!n.read && <div className="sd-unread-dot"></div>}
             </div>
-            {!n.read && <div className="sd-unread-dot"></div>}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -1151,7 +1233,7 @@ function ProfileSection({ user, myQuestions, bids, onUpdateProfile }) {
               onMouseEnter={(e) => { e.currentTarget.style.opacity = 1; }}
               onMouseLeave={(e) => { e.currentTarget.style.opacity = 0; }}
             >
-              <span style={{ fontSize: 20 }}>📷</span>
+              <Camera size={20} style={{ marginBottom: 4 }} />
               Change Photo
             </label>
             <input
@@ -1164,8 +1246,8 @@ function ProfileSection({ user, myQuestions, bids, onUpdateProfile }) {
           </div>
 
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-            <label htmlFor="student-photo-input-btn" className="btn btn-secondary btn-sm" style={{ cursor: "pointer", fontSize: 12 }}>
-              📷 Upload Photo
+            <label htmlFor="student-photo-input-btn" className="btn btn-secondary btn-sm" style={{ cursor: "pointer", fontSize: 12, display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <Upload size={14} /> Upload Photo
             </label>
             <input
               id="student-photo-input-btn"
@@ -1177,9 +1259,10 @@ function ProfileSection({ user, myQuestions, bids, onUpdateProfile }) {
             {form.avatar_url && (
               <button
                 className="btn btn-sm"
-                style={{ background: "#FEE2E2", color: "#EF4444", border: "none", fontSize: 12 }}
+                style={{ background: "#FEE2E2", color: "#EF4444", border: "none", fontSize: 12, display: "inline-flex", alignItems: "center", gap: "4px" }}
                 onClick={handleRemovePhoto}
               >
+                <Trash2 size={12} />
                 Remove
               </button>
             )}
@@ -1196,18 +1279,19 @@ function ProfileSection({ user, myQuestions, bids, onUpdateProfile }) {
 
           <button
             className="btn btn-primary btn-sm"
-            style={{ marginTop: 18, width: "100%", justifyContent: "center" }}
+            style={{ marginTop: 18, width: "100%", justifyContent: "center", display: "inline-flex", alignItems: "center", gap: "6px" }}
             onClick={() => {
               if (editing) handleSave();
               else setEditing(true);
             }}
           >
+            {editing ? <Save size={14} /> : <Edit size={14} />}
             {editing ? "Save Changes" : "Edit Profile"}
           </button>
           {editing && (
             <button
               className="btn btn-secondary btn-sm"
-              style={{ marginTop: 8, width: "100%", justifyContent: "center" }}
+              style={{ marginTop: 8, width: "100%", justifyContent: "center", display: "inline-flex", alignItems: "center", gap: "6px" }}
               onClick={() => {
                 setForm({
                   name: user.name || "",
@@ -1221,6 +1305,7 @@ function ProfileSection({ user, myQuestions, bids, onUpdateProfile }) {
                 setEditing(false);
               }}
             >
+              <X size={14} />
               Cancel
             </button>
           )}

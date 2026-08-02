@@ -2,6 +2,30 @@ import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { mockTutors, subjects } from "../mockData";
 import { supabase } from "../supabase";
+import {
+  LayoutDashboard,
+  Search,
+  FileText,
+  CheckCircle2,
+  DollarSign,
+  ArrowUpRight,
+  Bell,
+  User,
+  Clock,
+  ArrowRight,
+  MessageSquare,
+  Send,
+  Trash2,
+  Edit,
+  Save,
+  X,
+  CreditCard,
+  Check,
+  Calendar,
+  Star,
+  Camera,
+  Upload
+} from "lucide-react";
 
 //  INITIAL SEED DATA
 const initialBids = [];
@@ -11,14 +35,14 @@ const initialLedger = [];
 
 //  NAV ITEMS FOR SIDEBAR 
 const getNavItems = (pendingBidsCount, unreadNotifsCount) => [
-  { id: "dashboard", label: "Dashboard", icon: "" },
-  { id: "browse", label: "Browse Questions", icon: "" },
-  { id: "bids", label: "My Bids", icon: "", badge: pendingBidsCount },
-  { id: "answers", label: "My Answers", icon: "" },
-  { id: "earnings", label: "Earnings", icon: "" },
-  { id: "withdrawals", label: "Withdrawals", icon: "" },
-  { id: "notifications", label: "Notifications", icon: "", badge: unreadNotifsCount },
-  { id: "profile", label: "Profile", icon: "" },
+  { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
+  { id: "browse", label: "Browse Questions", icon: <Search size={18} /> },
+  { id: "bids", label: "My Bids", icon: <FileText size={18} />, badge: pendingBidsCount },
+  { id: "answers", label: "My Answers", icon: <CheckCircle2 size={18} /> },
+  { id: "earnings", label: "Earnings", icon: <DollarSign size={18} /> },
+  { id: "withdrawals", label: "Withdrawals", icon: <ArrowUpRight size={18} /> },
+  { id: "notifications", label: "Notifications", icon: <Bell size={18} />, badge: unreadNotifsCount },
+  { id: "profile", label: "Profile", icon: <User size={18} /> },
 ];
 
 //  SUB-COMPONENTS 
@@ -37,20 +61,21 @@ function DashboardHome({ user, bids, setBids, notifications, setNotifications, s
           <h1> Welcome, {user.name.split(" ")[0]}!</h1>
           <p>Manage your sessions, bids, earnings, and check active questions on your student portal.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setActive("browse")}>
-           Browse Questions
+        <button className="btn btn-primary" onClick={() => setActive("browse")} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          <Search size={16} />
+          Browse Questions
         </button>
       </div>
 
       {/* Stats Cards */}
       <div className="sd-stats-grid">
         {[
-          { icon: "", num: activeSessionsCount, label: "Active Answers", color: "#FF9800", onClick: () => setActive("answers") },
-          { icon: "", num: completedCount, label: "Solved Questions", color: "#4CAF50", onClick: () => setActive("answers") },
-          { icon: "", num: "4.8", label: "Avg Rating", color: "#2196F3", onClick: () => setActive("profile") },
-          { icon: "", num: pendingBidsCount, label: "Pending Bids", color: "#E91E63", onClick: () => setActive("bids") },
-          { icon: "", num: "$320", label: "Available Cash", color: "#9C27B0", onClick: () => setActive("earnings") },
-          { icon: "", num: unreadCount, label: "Unread Alerts", color: "#FF5722", onClick: () => setActive("notifications") },
+          { icon: <CheckCircle2 size={20} />, num: activeSessionsCount, label: "Active Answers", color: "#FF9800", onClick: () => setActive("answers") },
+          { icon: <CheckCircle2 size={20} />, num: completedCount, label: "Solved Questions", color: "#4CAF50", onClick: () => setActive("answers") },
+          { icon: <Star size={20} />, num: "4.8", label: "Avg Rating", color: "#2196F3", onClick: () => setActive("profile") },
+          { icon: <FileText size={20} />, num: pendingBidsCount, label: "Pending Bids", color: "#E91E63", onClick: () => setActive("bids") },
+          { icon: <DollarSign size={20} />, num: "$320", label: "Available Cash", color: "#9C27B0", onClick: () => setActive("earnings") },
+          { icon: <Bell size={20} />, num: unreadCount, label: "Unread Alerts", color: "#FF5722", onClick: () => setActive("notifications") },
         ].map((s) => (
           <div className="sd-stat-card" key={s.label} onClick={s.onClick} style={{ "--accent-color": s.color, cursor: "pointer" }}>
             <div className="sd-stat-icon" style={{ background: s.color + "18", color: s.color }}>{s.icon}</div>
@@ -64,7 +89,9 @@ function DashboardHome({ user, bids, setBids, notifications, setNotifications, s
       <div className="sd-widget" style={{ marginTop: 24 }}>
         <div className="sd-widget-header">
           <h2> Active Answering Sessions</h2>
-          <button className="sd-link-btn" onClick={() => setActive("answers")}>View all answers →</button>
+          <button className="sd-link-btn" onClick={() => setActive("answers")} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+            View all answers <ArrowRight size={14} />
+          </button>
         </div>
         <div className="sd-list">
           {allQuestions
@@ -80,8 +107,11 @@ function DashboardHome({ user, bids, setBids, notifications, setNotifications, s
                     <span>Due: {new Date(q.deadline).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
                   </div>
                 </div>
-                <Link to={`/question/${q.id}`}>
-                  <button className="btn btn-sm btn-primary">Open Chat →</button>
+                <Link to={`/question/${q.id}`} style={{ display: "inline-flex" }}>
+                  <button className="btn btn-sm btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    <MessageSquare size={14} />
+                    Open Chat
+                  </button>
                 </Link>
               </div>
             ))}
@@ -248,10 +278,12 @@ function BrowseQuestionsSection({ bids, onAddBid, tutorSubjects, allQuestions, l
               />
             </div>
             <div style={{ display: "flex", gap: 10 }}>
-              <button type="submit" className="btn btn-primary btn-sm">
+              <button type="submit" className="btn btn-primary btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <Send size={14} />
                 Submit Bid
               </button>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={handleCancelBid}>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={handleCancelBid} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <X size={14} />
                 Cancel
               </button>
             </div>
@@ -309,14 +341,17 @@ function BrowseQuestionsSection({ bids, onAddBid, tutorSubjects, allQuestions, l
                     </div>
                     <div>
                       {isAlreadyBid ? (
-                        <button className="btn btn-secondary btn-sm" disabled style={{ opacity: 0.6 }}>
-                           Bid Submitted
+                        <button className="btn btn-secondary btn-sm" disabled style={{ opacity: 0.6, display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                          <Check size={14} />
+                          Bid Submitted
                         </button>
                       ) : (
                         <button
                           className="btn btn-primary btn-sm"
                           onClick={() => handleOpenBidForm(q)}
+                          style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                         >
+                          <FileText size={14} />
                           {q.isPaid ? "Place Bid" : "Volunteer Help"}
                         </button>
                       )}
@@ -407,10 +442,12 @@ function SubmitBidsSection({ bids, onCancelBid, onEditBid }) {
                       />
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <button className="btn btn-primary btn-sm" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => handleSaveEdit(bid.id)}>
+                      <button className="btn btn-primary btn-sm" style={{ padding: "4px 10px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: "4px" }} onClick={() => handleSaveEdit(bid.id)}>
+                        <Save size={12} />
                         Save
                       </button>
-                      <button className="btn btn-secondary btn-sm" style={{ padding: "4px 10px", fontSize: 12 }} onClick={() => setEditingBidId(null)}>
+                      <button className="btn btn-secondary btn-sm" style={{ padding: "4px 10px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: "4px" }} onClick={() => setEditingBidId(null)}>
+                        <X size={12} />
                         Cancel
                       </button>
                     </div>
@@ -423,11 +460,13 @@ function SubmitBidsSection({ bids, onCancelBid, onEditBid }) {
 
                 {!isEditing && (
                   <div className="sd-bid-actions" style={{ marginTop: "auto" }}>
-                    <button className="btn btn-primary btn-sm" onClick={() => startEdit(bid)}>
-                       Edit Bid
+                    <button className="btn btn-primary btn-sm" onClick={() => startEdit(bid)} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                      <Edit size={14} />
+                      Edit Bid
                     </button>
-                    <button className="btn btn-secondary btn-sm" onClick={() => onCancelBid(bid.id)}>
-                       Withdraw
+                    <button className="btn btn-secondary btn-sm" onClick={() => onCancelBid(bid.id)} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                      <Trash2 size={14} />
+                      Withdraw
                     </button>
                   </div>
                 )}
@@ -524,11 +563,13 @@ function MyAnswersSection({ onSolveQuestion, completedList, allQuestions }) {
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <Link to={`/question/${q.id}`} className="btn btn-secondary btn-sm">
-                     Chat
+                  <Link to={`/question/${q.id}`} className="btn btn-secondary btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    <MessageSquare size={14} />
+                    Chat
                   </Link>
-                  <button className="btn btn-primary btn-sm" onClick={() => onSolveQuestion(q)}>
-                     Complete Session
+                  <button className="btn btn-primary btn-sm" onClick={() => onSolveQuestion(q)} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    <CheckCircle2 size={14} />
+                    Complete Session
                   </button>
                 </div>
               </div>
@@ -769,8 +810,9 @@ function WithdrawalsSection({ balance, onWithdraw, withdrawalHistory }) {
                 />
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
-                 Request Payout
+              <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <ArrowUpRight size={16} />
+                Request Payout
               </button>
             </form>
           </div>
@@ -827,28 +869,38 @@ function NotificationsSection({ notifications, onMarkAllRead, onMarkSingleRead }
       </div>
 
       {unreadCount > 0 && (
-        <button className="btn btn-secondary btn-sm" style={{ marginBottom: 20 }} onClick={onMarkAllRead}>
-           Mark all as read
+        <button className="btn btn-secondary btn-sm" style={{ marginBottom: 20, display: "inline-flex", alignItems: "center", gap: "6px" }} onClick={onMarkAllRead}>
+          <Check size={14} />
+          Mark all as read
         </button>
       )}
 
       <div className="sd-notif-list">
-        {notifications.map((n) => (
-          <div
-            className={`sd-notif-item ${!n.read ? "sd-notif-unread" : ""}`}
-            key={n.id}
-            onClick={() => onMarkSingleRead(n.id)}
-            style={{ cursor: "pointer" }}
-          >
-            <div className="sd-notif-icon-lg" style={{ background: n.color + "18", color: n.color }}>{n.icon}</div>
-            <div className="sd-notif-body">
-              <div className="sd-notif-title" style={{ fontWeight: n.read ? 500 : 700 }}>{n.title}</div>
-              <div className="sd-notif-text">{n.body}</div>
-              <div className="sd-notif-time">{n.time}</div>
+        {notifications.map((n) => {
+          let notifIcon = <Bell size={20} />;
+          if (n.type === "bid") notifIcon = <FileText size={20} />;
+          else if (n.type === "payment") notifIcon = <CreditCard size={20} />;
+          else if (n.type === "download") notifIcon = <Download size={20} />;
+
+          return (
+            <div
+              className={`sd-notif-item ${!n.read ? "sd-notif-unread" : ""}`}
+              key={n.id}
+              onClick={() => onMarkSingleRead(n.id)}
+              style={{ cursor: "pointer" }}
+            >
+              <div className="sd-notif-icon-lg" style={{ background: n.color + "18", color: n.color, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                {notifIcon}
+              </div>
+              <div className="sd-notif-body">
+                <div className="sd-notif-title" style={{ fontWeight: n.read ? 500 : 700 }}>{n.title}</div>
+                <div className="sd-notif-text">{n.body}</div>
+                <div className="sd-notif-time">{n.time}</div>
+              </div>
+              {!n.read && <div className="sd-unread-dot"></div>}
             </div>
-            {!n.read && <div className="sd-unread-dot"></div>}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -1010,7 +1062,7 @@ function ProfileSection({ user, profile, setProfile, onUpdateProfile }) {
               onMouseEnter={(e) => { e.currentTarget.style.opacity = 1; }}
               onMouseLeave={(e) => { e.currentTarget.style.opacity = 0; }}
             >
-              <span style={{ fontSize: 20 }}>📷</span>
+              <Camera size={20} style={{ marginBottom: 4 }} />
               Change Photo
             </label>
             <input
@@ -1023,8 +1075,8 @@ function ProfileSection({ user, profile, setProfile, onUpdateProfile }) {
           </div>
 
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-            <label htmlFor="tutor-photo-input-btn" className="btn btn-secondary btn-sm" style={{ cursor: "pointer", fontSize: 12 }}>
-              📷 Upload Photo
+            <label htmlFor="tutor-photo-input-btn" className="btn btn-secondary btn-sm" style={{ cursor: "pointer", fontSize: 12, display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <Upload size={14} /> Upload Photo
             </label>
             <input
               id="tutor-photo-input-btn"
@@ -1036,9 +1088,10 @@ function ProfileSection({ user, profile, setProfile, onUpdateProfile }) {
             {form.avatar_url && (
               <button
                 className="btn btn-sm"
-                style={{ background: "#FEE2E2", color: "#EF4444", border: "none", fontSize: 12 }}
+                style={{ background: "#FEE2E2", color: "#EF4444", border: "none", fontSize: 12, display: "inline-flex", alignItems: "center", gap: "4px" }}
                 onClick={handleRemovePhoto}
               >
+                <Trash2 size={12} />
                 Remove
               </button>
             )}
@@ -1053,23 +1106,25 @@ function ProfileSection({ user, profile, setProfile, onUpdateProfile }) {
           </div>
           <button
             className="btn btn-primary btn-sm"
-            style={{ marginTop: 8, width: "100%", justifyContent: "center" }}
+            style={{ marginTop: 8, width: "100%", justifyContent: "center", display: "inline-flex", alignItems: "center", gap: "6px" }}
             onClick={() => {
               if (editing) handleSave();
               else setEditing(true);
             }}
           >
+            {editing ? <Save size={14} /> : <Edit size={14} />}
             {editing ? " Save Changes" : " Edit Profile"}
           </button>
           {editing && (
             <button
               className="btn btn-secondary btn-sm"
-              style={{ marginTop: 8, width: "100%", justifyContent: "center" }}
+              style={{ marginTop: 8, width: "100%", justifyContent: "center", display: "inline-flex", alignItems: "center", gap: "6px" }}
               onClick={() => {
                 setForm({ ...profile });
                 setEditing(false);
               }}
             >
+              <X size={14} />
               Cancel
             </button>
           )}
