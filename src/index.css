@@ -74,7 +74,22 @@ img, video, audio, iframe, svg { max-width: 100%; height: auto; }
 .items-center { align-items: center; }
 .justify-between { justify-content: space-between; }
 .wrap { flex-wrap: wrap; }
-.page { min-height: calc(100vh - 72px); padding-bottom: 80px; }
+.page {
+  min-height: calc(100vh - 72px);
+  padding-bottom: 80px;
+  animation: pageFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 /* ─── GOOGLE FONT ────────────────────────────────────────────── */
 

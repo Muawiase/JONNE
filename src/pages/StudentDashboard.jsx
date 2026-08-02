@@ -276,10 +276,10 @@ function DashboardHome({ user, setActive, myQuestions, loading, bids, notificati
           <h1> Welcome back, {firstName}!</h1>
           <p>Track your questions, manage bids, and stay on top of your learning journey.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setActive("post")} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+        <Link to="/post" className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
           <PlusCircle size={16} />
           Post a Question
-        </button>
+        </Link>
       </div>
 
       {/* Stats Row */}
@@ -1567,17 +1567,32 @@ export default function StudentDashboard({ user, onUpdateProfile }) {
           </div>
         </div>
         <nav className="sd-nav">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              className={`sd-nav-item ${active === item.id ? "sd-nav-item-active" : ""}`}
-              onClick={() => { setActive(item.id); setSidebarOpen(false); }}
-            >
-              <span className="sd-nav-icon">{item.icon}</span>
-              <span className="sd-nav-label">{item.label}</span>
-              {item.badge > 0 && <span className="sd-nav-badge">{item.badge}</span>}
-            </button>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            if (item.id === "post") {
+              return (
+                <Link
+                  key={item.id}
+                  to="/post"
+                  className="sd-nav-item"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <span className="sd-nav-icon">{item.icon}</span>
+                  <span className="sd-nav-label">{item.label}</span>
+                </Link>
+              );
+            }
+            return (
+              <button
+                key={item.id}
+                className={`sd-nav-item ${active === item.id ? "sd-nav-item-active" : ""}`}
+                onClick={() => { setActive(item.id); setSidebarOpen(false); }}
+              >
+                <span className="sd-nav-icon">{item.icon}</span>
+                <span className="sd-nav-label">{item.label}</span>
+                {item.badge > 0 && <span className="sd-nav-badge">{item.badge}</span>}
+              </button>
+            );
+          })}
         </nav>
         <div className="sd-sidebar-footer">
           <Link to="/" className="sd-sidebar-back">← Back to Site</Link>

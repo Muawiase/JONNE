@@ -39,6 +39,11 @@ export default function Navbar({ user, onLogout }) {
     setMobileOpen(false);
   }, [location.pathname]);
 
+  const isActive = (path) => {
+    if (path === "/") return location.pathname === "/";
+    return location.pathname === path || location.pathname.startsWith(path + "/");
+  };
+
   return (
     <nav className="navbar" style={{ position: "sticky", top: 0, zIndex: 200, background: "rgba(255, 255, 255, 0.95)", backdropFilter: "blur(12px)" }}>
       <div className="container" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", position: "relative" }}>
@@ -58,27 +63,27 @@ export default function Navbar({ user, onLogout }) {
 
         {/* Desktop Navigation Links */}
         <div className="navbar-links desktop-only" style={{ display: "flex", alignItems: "center", gap: "12px", whiteSpace: "nowrap" }}>
-          <Link to="/browse" className="nav-item-link" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          <Link to="/browse" className={`nav-item-link ${isActive("/browse") ? "active" : ""}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
             <Compass size={16} />
             Browse
           </Link>
-          <Link to="/knowledge-hub" className="nav-item-link" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          <Link to="/knowledge-hub" className={`nav-item-link ${isActive("/knowledge-hub") ? "active" : ""}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
             <BookOpen size={16} />
             Knowledge Hub
           </Link>
-          <Link to="/about" className="nav-item-link" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          <Link to="/about" className={`nav-item-link ${isActive("/about") ? "active" : ""}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
             <Info size={16} />
             About
           </Link>
-          <Link to="/contact" className="nav-item-link" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          <Link to="/contact" className={`nav-item-link ${isActive("/contact") ? "active" : ""}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
             <Mail size={16} />
             Contact
           </Link>
-          <Link to="/wellness" className="nav-item-link" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          <Link to="/wellness" className={`nav-item-link ${isActive("/wellness") ? "active" : ""}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
             <HeartPulse size={16} />
             Wellness
           </Link>
-          <Link to="/ai-assistant" className="nav-item-link ai-link" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          <Link to="/ai-assistant" className={`nav-item-link ai-link ${isActive("/ai-assistant") ? "active" : ""}`} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
             <Sparkles size={16} />
             AI Assistant
           </Link>
@@ -88,12 +93,12 @@ export default function Navbar({ user, onLogout }) {
           {user ? (
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
               {user.role === "student" && (
-                <Link to="/post" className="btn btn-sm btn-secondary" style={{ borderRadius: "var(--radius-sm)", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <Link to="/post" className={`btn btn-sm ${isActive("/post") ? "btn-primary" : "btn-secondary"}`} style={{ borderRadius: "var(--radius-sm)", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: "6px" }}>
                   <PlusCircle size={14} />
                   Post Question
                 </Link>
               )}
-              <Link to={dashboardPath} style={{ fontWeight: 600, color: "var(--primary)", whiteSpace: "nowrap", fontSize: "14px", padding: "6px 10px", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <Link to={dashboardPath} className={`nav-item-link nav-dashboard-link ${isActive("/dashboard") ? "active" : ""}`} style={{ fontWeight: 600, color: "var(--primary)", whiteSpace: "nowrap", fontSize: "14px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px" }}>
                 <LayoutDashboard size={14} />
                 Dashboard
               </Link>
@@ -236,12 +241,12 @@ export default function Navbar({ user, onLogout }) {
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
                   {user.role === "student" && (
-                    <Link to="/post" onClick={closeMobile} className="btn btn-secondary" style={{ flex: 1, justifyContent: "center", borderRadius: "var(--radius-sm)", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                    <Link to="/post" onClick={closeMobile} className={`btn ${isActive("/post") ? "btn-primary" : "btn-secondary"}`} style={{ flex: 1, justifyContent: "center", borderRadius: "var(--radius-sm)", display: "inline-flex", alignItems: "center", gap: "6px" }}>
                       <PlusCircle size={16} />
                       Post Question
                     </Link>
                   )}
-                  <Link to={dashboardPath} onClick={closeMobile} className="btn btn-primary" style={{ flex: 1, justifyContent: "center", color: "white", borderRadius: "var(--radius-sm)", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <Link to={dashboardPath} onClick={closeMobile} className={`btn ${isActive("/dashboard") ? "btn-primary" : "btn-secondary"}`} style={{ flex: 1, justifyContent: "center", borderRadius: "var(--radius-sm)", display: "inline-flex", alignItems: "center", gap: "6px" }}>
                     <LayoutDashboard size={16} />
                     My Dashboard
                   </Link>
@@ -261,27 +266,27 @@ export default function Navbar({ user, onLogout }) {
             <hr style={{ border: "none", borderTop: "1px solid var(--border)", margin: "4px 0" }} />
 
             {/* Navigation Links */}
-            <Link to="/browse" onClick={closeMobile} className="mobile-nav-item" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <Link to="/browse" onClick={closeMobile} className={`mobile-nav-item ${isActive("/browse") ? "active" : ""}`} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <Compass size={18} />
               Browse Questions
             </Link>
-            <Link to="/knowledge-hub" onClick={closeMobile} className="mobile-nav-item" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <Link to="/knowledge-hub" onClick={closeMobile} className={`mobile-nav-item ${isActive("/knowledge-hub") ? "active" : ""}`} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <BookOpen size={18} />
               Knowledge Hub
             </Link>
-            <Link to="/about" onClick={closeMobile} className="mobile-nav-item" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <Link to="/about" onClick={closeMobile} className={`mobile-nav-item ${isActive("/about") ? "active" : ""}`} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <Info size={18} />
               About Us
             </Link>
-            <Link to="/contact" onClick={closeMobile} className="mobile-nav-item" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <Link to="/contact" onClick={closeMobile} className={`mobile-nav-item ${isActive("/contact") ? "active" : ""}`} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <Mail size={18} />
               Contact Us
             </Link>
-            <Link to="/wellness" onClick={closeMobile} className="mobile-nav-item" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <Link to="/wellness" onClick={closeMobile} className={`mobile-nav-item ${isActive("/wellness") ? "active" : ""}`} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <HeartPulse size={18} />
               Wellness Center
             </Link>
-            <Link to="/ai-assistant" onClick={closeMobile} className="mobile-nav-item ai-mobile-link" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <Link to="/ai-assistant" onClick={closeMobile} className={`mobile-nav-item ai-mobile-link ${isActive("/ai-assistant") ? "active" : ""}`} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <Sparkles size={18} />
               AI Study Assistant
             </Link>
@@ -307,6 +312,12 @@ export default function Navbar({ user, onLogout }) {
           background: var(--primary-light);
           color: var(--primary);
         }
+        .nav-item-link.active {
+          background: var(--primary-light);
+          color: var(--primary);
+          font-weight: 700;
+          box-shadow: inset 0 0 0 1.5px rgba(79, 70, 229, 0.2);
+        }
         .nav-item-link.ai-link {
           display: inline-flex;
           align-items: center;
@@ -328,6 +339,12 @@ export default function Navbar({ user, onLogout }) {
         .mobile-nav-item:hover {
           background: var(--bg-main);
           color: var(--primary);
+        }
+        .mobile-nav-item.active {
+          background: var(--primary-light);
+          color: var(--primary);
+          font-weight: 700;
+          border-left: 3px solid var(--primary);
         }
         .mobile-nav-item.ai-mobile-link {
           color: var(--primary);

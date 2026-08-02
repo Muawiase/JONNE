@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Navbar from "./components/Navbar";
+import ScrollToTop from "./components/ScrollToTop";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
@@ -22,8 +23,10 @@ import AIStudyAssistantPage from "./pages/AIStudyAssistantPage";
 import KnowledgeHubPage from "./pages/KnowledgeHubPage";
 import Footer from "./components/Footer";
 import { supabase } from "./supabase";
+
 export default function App() {
   const [user, setUser] = useState(null); // null = guest
+  const [authLoading, setAuthLoading] = useState(true);
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [questions, setQuestions] = useState(null); // managed in Browse
 
@@ -37,6 +40,9 @@ export default function App() {
       if (session?.user) {
         mergeSupabaseUser(session.user);
       }
+      setAuthLoading(false);
+    }).catch(() => {
+      setAuthLoading(false);
     });
 
     // Subscribe to future auth changes
@@ -47,6 +53,7 @@ export default function App() {
         } else {
           setUser(null);
         }
+        setAuthLoading(false);
       }
     );
 
@@ -176,8 +183,19 @@ export default function App() {
     return element;
   };
 
+  if (authLoading) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "var(--bg-main)" }}>
+        <div style={{ width: 40, height: 40, border: "3px solid var(--border)", borderTopColor: "var(--primary)", borderRadius: "50%", animation: "appSpin 0.8s linear infinite" }} />
+        <p style={{ marginTop: 16, color: "var(--text-muted)", fontWeight: 500, fontSize: "14px" }}>Loading session...</p>
+        <style>{`@keyframes appSpin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
   return (
     <div className="app">
+      <ScrollToTop />
       <Navbar user={user} onLogout={logout} />
       {showGuestModal && (
         <GuestModal onClose={() => setShowGuestModal(false)} />

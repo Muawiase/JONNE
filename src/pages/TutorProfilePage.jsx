@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { mockTutors } from "../mockData";
 import GuestModal from "../components/GuestModal";
+import BackButton from "../components/BackButton";
 import { useState } from "react";
 
 function Stars({ rating }) {
@@ -42,11 +43,9 @@ export default function TutorProfilePage({ user, onGuestAction }) {
       {showModal && <GuestModal onClose={() => setShowModal(false)} />}
 
       {/*  BACK  */}
-      <div style={{ background: "white", borderBottom: "1px solid var(--border)", padding: "12px 0" }}>
+      <div style={{ background: "white", borderBottom: "1px solid var(--border)", padding: "10px 0" }}>
         <div className="container">
-          <Link to="/browse" style={{ color: "var(--text-secondary)", fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
-            ← Back to Browse
-          </Link>
+          <BackButton fallbackPath="/browse" label="Back to Browse" />
         </div>
       </div>
 

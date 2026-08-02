@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabase";
 import { educationLevels } from "../mockData";
+import BackButton from "../components/BackButton";
 
 export default function PostQuestionPage({ user }) {
   const navigate = useNavigate();
@@ -137,6 +138,7 @@ export default function PostQuestionPage({ user }) {
     <div className="page">
       <div className="browse-hero">
         <div className="container">
+          <BackButton fallbackPath="/browse" label="Back" style={{ color: "rgba(255,255,255,0.9)", marginBottom: "12px" }} />
           <h1> Post a Question</h1>
           <p>Describe what you need help with — be as specific as possible for better responses.</p>
         </div>

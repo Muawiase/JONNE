@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { mockTutors } from "../mockData";
 import { supabase } from "../supabase";
 import GuestModal from "../components/GuestModal";
+import BackButton from "../components/BackButton";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -115,7 +116,7 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
 
   // ── payment simulation states ──
   const [paymentStep, setPaymentStep]               = useState("SELECT"); // SELECT, DETAILS, PROCESSING, VERIFY, RESULT
-  const [paymentPhone, setPaymentPhone]             = useState("");
+  const [paymentPhone, setPaymentPhone]             = useState("+256 ");
   const [paymentPin, setPaymentPin]                 = useState("");
   const [cardName, setCardName]                     = useState("");
   const [cardNumber, setCardNumber]                 = useState("");
@@ -124,6 +125,7 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
   const [otpCode, setOtpCode]                       = useState("");
   const [simulatedOutcome, setSimulatedOutcome]     = useState(null);
   const [simulatedTxDetails, setSimulatedTxDetails] = useState(null);
+  const [simulatedFailureMessage, setSimulatedFailureMessage] = useState("");
   const [processingMessage, setProcessingMessage]   = useState("Processing payment...");
 
   // ── chat ──
@@ -345,7 +347,7 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
 
   const handlePhoneChange = (e) => {
     let value = e.target.value.replace(/[^0-9+\s]/g, '');
-    setPaymentPhone(value.substring(0, 15));
+    setPaymentPhone(value.substring(0, 18));
   };
 
   const handlePinChange = (e) => {
@@ -361,32 +363,36 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
   const handleDetailsSubmit = (e) => {
     e.preventDefault();
     setPaymentError("");
+    setSimulatedFailureMessage("");
 
     if (paymentMethod === "CARD") {
       if (!cardName.trim()) {
         setPaymentError("Cardholder name is required.");
         return;
       }
-      if (cardNumber.replace(/\s+/g, '').length !== 16) {
+      const pureCard = cardNumber.replace(/\s+/g, '');
+      if (pureCard.length !== 16 || !/^\d{16}$/.test(pureCard)) {
         setPaymentError("Card number must be 16 digits.");
         return;
       }
-      if (cardExpiry.length !== 5 || !cardExpiry.includes('/')) {
+      if (cardExpiry.length !== 5 || !/^(0[1-9]|1[0-2])\/\d{2}$/.test(cardExpiry)) {
         setPaymentError("Card expiry must be in MM/YY format.");
         return;
       }
-      if (cardCvv.length !== 3) {
+      if (cardCvv.length !== 3 || !/^\d{3}$/.test(cardCvv)) {
         setPaymentError("CVV must be 3 digits.");
         return;
       }
     } else {
-      const purePhone = paymentPhone.replace(/\s+/g, '');
-      if (!paymentPhone.trim()) {
-        setPaymentError("Phone number is required.");
+      const trimmedPhone = paymentPhone.trim();
+      const purePhone = trimmedPhone.replace(/\s+/g, '');
+      if (!purePhone.startsWith("+256")) {
+        setPaymentError("Invalid phone number. Please enter a valid number with the correct country code.");
         return;
       }
-      if (purePhone.length < 9 || purePhone.length > 15) {
-        setPaymentError("Please enter a valid phone number (9 to 15 digits).");
+      const digitsOnly = purePhone.replace(/[^0-9]/g, '');
+      if (digitsOnly.length < 11 || digitsOnly.length > 15) {
+        setPaymentError("Invalid phone number. Please enter a valid number with the correct country code.");
         return;
       }
     }
@@ -419,28 +425,19 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
       return;
     }
 
-    // Choose randomly, but weight SUCCESS at 60%
-    const rand = Math.random();
-    let selected = "SUCCESS";
-    if (rand >= 0.6) {
-      let availableFailures = [
-        "FAILED", 
-        "CANCELLED", 
-        "INSUFFICIENT_BALANCE", 
-        "TIMEOUT", 
-        "DECLINED"
-      ];
-      if (paymentMethod === "CARD") {
-        availableFailures.push("INVALID_CARD");
-      } else {
-        availableFailures.push("PIN_INCORRECT");
-      }
-      
-      const randomIndex = Math.floor(Math.random() * availableFailures.length);
-      selected = availableFailures[randomIndex];
+    let isEven = false;
+    if (paymentMethod === "CARD") {
+      const pureCard = cardNumber.replace(/\s+/g, '');
+      const lastChar = pureCard.slice(-1);
+      const lastDigit = parseInt(lastChar, 10);
+      isEven = !isNaN(lastDigit) && lastDigit % 2 === 0;
+    } else {
+      const purePhone = paymentPhone.replace(/\s+/g, '');
+      const digitsOnly = purePhone.replace(/[^0-9]/g, '');
+      const lastChar = digitsOnly.slice(-1);
+      const lastDigit = parseInt(lastChar, 10);
+      isEven = !isNaN(lastDigit) && lastDigit % 2 === 0;
     }
-
-    setSimulatedOutcome(selected);
 
     const amountStr = paymentMethod === 'MTN' 
       ? `UGX ${(acceptedBid.bid_price * 3700).toLocaleString()}` 
@@ -456,17 +453,21 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
 
     const txRef = `TXN-${new Date().toISOString().slice(0,10).replace(/-/g, '')}-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    const details = {
-      txRef,
-      amount: amountStr,
-      method: paymentMethod === 'MTN' ? 'MTN Mobile Money' : 'Visa/Mastercard',
-      date: dateStr,
-      status: selected === "SUCCESS" ? "Completed" : "Failed"
-    };
+    if (isEven) {
+      // Deterministic Success for EVEN last digit
+      setSimulatedOutcome("SUCCESS");
+      setSimulatedFailureMessage("");
 
-    setSimulatedTxDetails(details);
+      const details = {
+        txRef,
+        amount: amountStr,
+        method: paymentMethod === 'MTN' ? 'MTN Mobile Money' : 'Visa/Mastercard',
+        date: dateStr,
+        status: "Successful"
+      };
 
-    if (selected === "SUCCESS") {
+      setSimulatedTxDetails(details);
+
       try {
         const { data: newPayment, error: insertErr } = await supabase
           .from('payments')
@@ -483,7 +484,6 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
           
         if (insertErr) {
           console.error("Supabase insert error:", insertErr);
-          throw new Error("Payment saved but UI update failed: " + insertErr.message);
         }
         
         const { error: updateErr } = await supabase
@@ -501,9 +501,13 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
         setQuestion(prev => prev ? { ...prev, status: 'in-progress' } : null);
         setPaymentSuccess(true);
       } catch (err) {
-        setPaymentError(err.message || "Failed to process simulated payment on our servers.");
-        setSimulatedOutcome("FAILED");
+        console.error("Payment insert error:", err);
       }
+    } else {
+      // Deterministic Failure for ODD last digit
+      setSimulatedOutcome("DECLINED");
+      setSimulatedFailureMessage("Payment declined: Insufficient funds.");
+      setSimulatedTxDetails(null); // Do NOT generate receipt on failed payment
     }
   };
 
@@ -829,11 +833,9 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
       {showModal && <GuestModal onClose={() => setShowModal(false)} />}
 
       {/*  BACK  */}
-      <div style={{ background: "white", borderBottom: "1px solid var(--border)", padding: "12px 0" }}>
+      <div style={{ background: "white", borderBottom: "1px solid var(--border)", padding: "10px 0" }}>
         <div className="container">
-          <Link to="/browse" style={{ color: "var(--text-secondary)", fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
-            ← Back to Browse
-          </Link>
+          <BackButton fallbackPath="/browse" label="Back to Browse" />
         </div>
       </div>
 
@@ -1605,27 +1607,15 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
                     <div>
                       <div className="payment-input-group">
                         <label>MTN Phone Number</label>
-                        <div style={{ position: "relative" }}>
-                          <input 
-                            type="text" 
-                            className="payment-input-field" 
-                            placeholder="0771 234 567"
-                            value={paymentPhone}
-                            onChange={handlePhoneChange}
-                            style={{ paddingLeft: 60 }}
-                          />
-                          <div style={{
-                            position: "absolute",
-                            left: 12,
-                            top: "50%",
-                            transform: "translateY(-50%)",
-                            fontSize: 14,
-                            fontWeight: 700,
-                            color: "#64748b"
-                          }}>+256</div>
-                        </div>
+                        <input 
+                          type="text" 
+                          className="payment-input-field" 
+                          placeholder="+256 771 234 567"
+                          value={paymentPhone}
+                          onChange={handlePhoneChange}
+                        />
                         <div style={{ fontSize: 11, color: "#64748b", marginTop: 6 }}>
-                          Enter your active mobile money phone number to receive authorization prompt.
+                          Must include country code starting with +256 (e.g. +256 771 234 567).
                         </div>
                       </div>
                     </div>
@@ -1783,7 +1773,7 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
               )}
 
               {/* STEP 5: RESULT */}
-              {paymentStep === "RESULT" && simulatedOutcome && simulatedTxDetails && (
+              {paymentStep === "RESULT" && simulatedOutcome && (
                 <div style={{ textAlign: "center" }}>
                   
                   {simulatedOutcome === "SUCCESS" ? (
@@ -1796,6 +1786,48 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
                       <p style={{ fontSize: 13.5, color: "#475569", margin: "0 0 20px", lineHeight: 1.4 }}>
                         Your payment has been successfully completed. The question status has been updated.
                       </p>
+
+                      {/* Receipt Box - Only rendered for Successful payments */}
+                      {simulatedTxDetails && (
+                        <div style={{
+                          background: "#f8fafc",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: 12,
+                          padding: 16,
+                          textAlign: "left",
+                          marginBottom: 24
+                        }}>
+                          <div className="receipt-row">
+                            <span style={{ color: "#64748b", fontWeight: 500 }}>Transaction ID</span>
+                            <span style={{ fontWeight: 600, color: "#1e293b", fontFamily: "monospace" }}>{simulatedTxDetails.txRef}</span>
+                          </div>
+                          <div className="receipt-row">
+                            <span style={{ color: "#64748b", fontWeight: 500 }}>Payment Method</span>
+                            <span style={{ fontWeight: 600, color: "#1e293b" }}>{simulatedTxDetails.method}</span>
+                          </div>
+                          <div className="receipt-row">
+                            <span style={{ color: "#64748b", fontWeight: 500 }}>Amount</span>
+                            <span style={{ fontWeight: 700, color: "#1e293b" }}>{simulatedTxDetails.amount}</span>
+                          </div>
+                          <div className="receipt-row">
+                            <span style={{ color: "#64748b", fontWeight: 500 }}>Date & Time</span>
+                            <span style={{ fontWeight: 600, color: "#1e293b" }}>{simulatedTxDetails.date}</span>
+                          </div>
+                          <div className="receipt-row">
+                            <span style={{ color: "#64748b", fontWeight: 500 }}>Payment Status</span>
+                            <span style={{ 
+                              fontWeight: 700, 
+                              color: "#2e7d32",
+                              background: "#e8f5e9",
+                              padding: "2px 8px",
+                              borderRadius: 4,
+                              fontSize: 12
+                            }}>
+                              Successful
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div>
@@ -1807,65 +1839,17 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
                       <h4 style={{ 
                         fontSize: 18, 
                         fontWeight: 800, 
-                        color: simulatedOutcome === "CANCELLED" ? "#616161" : simulatedOutcome === "INSUFFICIENT_BALANCE" ? "#ef6c00" : "#d32f2f", 
+                        color: "#d32f2f", 
                         margin: "0 0 6px" 
                       }}>
-                        {simulatedOutcome === "FAILED" && "Payment Failed"}
-                        {simulatedOutcome === "CANCELLED" && "Payment Cancelled"}
-                        {simulatedOutcome === "INSUFFICIENT_BALANCE" && "Insufficient Funds"}
-                        {simulatedOutcome === "INVALID_CARD" && "Invalid Card Details"}
-                        {simulatedOutcome === "PIN_INCORRECT" && "Incorrect Mobile PIN"}
-                        {simulatedOutcome === "TIMEOUT" && "Gateway Timeout"}
-                        {simulatedOutcome === "DECLINED" && "Transaction Declined"}
+                        Payment Failed
                       </h4>
                       
-                      <p style={{ fontSize: 13.5, color: "#475569", margin: "0 0 20px", lineHeight: 1.4 }}>
-                        {simulatedOutcome === "FAILED" && "The payment transaction could not be completed. Please try again."}
-                        {simulatedOutcome === "CANCELLED" && "The transaction was cancelled. No charges were made."}
-                        {simulatedOutcome === "INSUFFICIENT_BALANCE" && "You do not have enough funds in your account to complete this transaction."}
-                        {simulatedOutcome === "INVALID_CARD" && "The card details provided were rejected by the issuing bank. Please verify and retry."}
-                        {simulatedOutcome === "PIN_INCORRECT" && "The Mobile Money PIN you entered is incorrect. Please authorize again."}
-                        {simulatedOutcome === "TIMEOUT" && "We were unable to reach the payment provider's network in time. Please retry."}
-                        {simulatedOutcome === "DECLINED" && "This transaction was declined by your bank/payment provider. Please contact your bank."}
+                      <p style={{ fontSize: 14, fontWeight: 600, color: "#c62828", margin: "0 0 24px", lineHeight: 1.4 }}>
+                        {simulatedFailureMessage || "Payment declined: Insufficient funds."}
                       </p>
                     </div>
                   )}
-
-                  {/* Receipt Box */}
-                  <div style={{
-                    background: "#f8fafc",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 12,
-                    padding: 16,
-                    textAlign: "left",
-                    marginBottom: 24
-                  }}>
-                    <div className="receipt-row">
-                      <span style={{ color: "#64748b", fontWeight: 500 }}>Transaction Ref</span>
-                      <span style={{ fontWeight: 600, color: "#1e293b", fontFamily: "monospace" }}>{simulatedTxDetails.txRef}</span>
-                    </div>
-                    <div className="receipt-row">
-                      <span style={{ color: "#64748b", fontWeight: 500 }}>Payment Method</span>
-                      <span style={{ fontWeight: 600, color: "#1e293b" }}>{simulatedTxDetails.method}</span>
-                    </div>
-                    <div className="receipt-row">
-                      <span style={{ color: "#64748b", fontWeight: 500 }}>Amount</span>
-                      <span style={{ fontWeight: 700, color: "#1e293b" }}>{simulatedTxDetails.amount}</span>
-                    </div>
-                    <div className="receipt-row">
-                      <span style={{ color: "#64748b", fontWeight: 500 }}>Date & Time</span>
-                      <span style={{ fontWeight: 600, color: "#1e293b" }}>{simulatedTxDetails.date}</span>
-                    </div>
-                    <div className="receipt-row">
-                      <span style={{ color: "#64748b", fontWeight: 500 }}>Status</span>
-                      <span style={{ 
-                        fontWeight: 700, 
-                        color: simulatedOutcome === "SUCCESS" ? "#2e7d32" : simulatedOutcome === "CANCELLED" ? "#616161" : "#d32f2f" 
-                      }}>
-                        {simulatedTxDetails.status}
-                      </span>
-                    </div>
-                  </div>
 
                   {/* Buttons */}
                   {simulatedOutcome === "SUCCESS" ? (

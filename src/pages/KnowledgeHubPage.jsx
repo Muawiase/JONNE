@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../supabase";
 import { mockUsers } from "../mockData";
+import BackButton from "../components/BackButton";
 
 export default function KnowledgeHubPage({ user, onGuestAction }) {
   const [rawPosts, setRawPosts] = useState([]);
@@ -643,6 +644,7 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
       <div className="knowledge-hero">
         <div className="container">
           <div className="knowledge-hero-content">
+            <BackButton label="Back" style={{ color: "rgba(255,255,255,0.9)", marginBottom: "12px" }} />
             <span className="knowledge-badge">Community Feed</span>
             <h1>Knowledge Hub</h1>
             <p>
