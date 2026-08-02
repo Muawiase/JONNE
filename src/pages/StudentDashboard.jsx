@@ -1312,7 +1312,7 @@ function ProfileSection({ user, myQuestions, bids, onUpdateProfile }) {
   );
 }
 
-// Cache variables for StudentDashboard to allow instant rendering
+// Cache variables for StudentDashboard
 let cachedStudentQuestions = null;
 let cachedStudentUserId = null;
 
@@ -1331,69 +1331,87 @@ export default function StudentDashboard({ user, onUpdateProfile }) {
       return;
     }
     
-    if (cachedStudentQuestions && cachedStudentUserId === user.id) {
-      setMyQuestions(cachedStudentQuestions.myQuestions);
-      setBids(cachedStudentQuestions.bids);
-      setLoadingQuestions(false);
-    } else {
-      setLoadingQuestions(true);
-    }
+    setLoadingQuestions(true);
 
     try {
+      // 1. Fetch questions for the student
       const { data: questionsData, error: qError } = await supabase
         .from("questions")
-        .select(`
-          id, title, subject, level, payment, description, created_at, status,
-          bids:bids(id, amount, tutor_name, tutor_id, question_id, message, accepted, created_at)
-        `)
+        .select("*")
         .eq("user_id", user.id)
         .order('created_at', { ascending: false });
 
-      if (!qError && questionsData) {
-        // Flatten nested bids
-        const realBids = questionsData.flatMap(q => q.bids || []);
+      if (qError) {
+        console.error("Error fetching student questions:", qError);
+      }
 
-        const nextMyQuestions = questionsData.map(q => ({
+      const qList = questionsData || [];
+
+      // 2. Fetch bids for these questions
+      let realBids = [];
+      if (qList.length > 0) {
+        const qIds = qList.map((q) => String(q.id));
+        const { data: bidsData, error: bError } = await supabase
+          .from("bids")
+          .select("*")
+          .in("question_id", qIds)
+          .order('created_at', { ascending: false });
+
+        if (!bError && bidsData) {
+          realBids = bidsData;
+        }
+      }
+
+      // Map questions with responses count
+      const nextMyQuestions = qList.map((q) => {
+        const qBids = realBids.filter((b) => String(b.question_id) === String(q.id));
+        const isPaid = q.payment !== null && q.payment > 0;
+        return {
           id: q.id,
           title: q.title,
           subject: q.subject,
           level: q.level || "High School",
           postedAt: q.created_at,
-          status: q.status || "open",
-          bidsCount: (q.bids || []).length,
-          payment: `$${q.payment || 0}`,
-          description: q.description
-        }));
-        setMyQuestions(nextMyQuestions);
+          status: q.status || (qBids.some((b) => b.accepted) ? "in-progress" : "open"),
+          responses: qBids.length,
+          bidsCount: qBids.length,
+          isPaid,
+          pricePerHour: q.payment || 0,
+          payment: isPaid ? `$${q.payment}/hr` : "FREE",
+          description: q.description,
+          deadline: q.deadline || q.created_at,
+        };
+      });
 
-        const declinedBidIds = JSON.parse(localStorage.getItem("jonne_declined_bids") || "[]");
+      setMyQuestions(nextMyQuestions);
 
-        const mappedBids = realBids.map(b => {
-          const relatedQuestion = questionsData.find(q => q.id === b.question_id);
-          const rateStr = b.amount === 0 ? "FREE" : `$${b.amount}/hr`;
-          const color = "#" + Math.floor(Math.abs(Math.sin(b.tutor_id || 1) * 16777215)).toString(16).padStart(6, '0');
-          return {
-            id: b.id,
-            tutor: b.tutor_name || "Tutor",
-            tutorId: b.tutor_id,
-            avatar: (b.tutor_name || "T").charAt(0).toUpperCase(),
-            color: color,
-            question: relatedQuestion ? relatedQuestion.title : "Question",
-            questionId: b.question_id,
-            rate: rateStr,
-            message: b.message || "",
-            rating: 4.8,
-            reviews: 12,
-            status: b.accepted ? "accepted" : (declinedBidIds.includes(b.id) ? "declined" : "pending"),
-            submittedAt: b.created_at,
-            isVerified: true
-          };
-        });
-        setBids(mappedBids);
+      const declinedBidIds = JSON.parse(localStorage.getItem("jonne_declined_bids") || "[]");
 
-        cachedStudentQuestions = { myQuestions: nextMyQuestions, bids: mappedBids };
-        cachedStudentUserId = user.id;
-      }
+      const mappedBids = realBids.map((b) => {
+        const relatedQuestion = qList.find((q) => String(q.id) === String(b.question_id));
+        const bidAmt = b.bid_price !== undefined && b.bid_price !== null ? b.bid_price : (b.amount || 0);
+        const rateStr = Number(bidAmt) === 0 ? "FREE" : `$${bidAmt}/hr`;
+        const color = "#" + Math.floor(Math.abs(Math.sin(b.tutor_id ? b.tutor_id.charCodeAt(0) : 1) * 16777215)).toString(16).padStart(6, '0');
+        return {
+          id: b.id,
+          tutor: b.tutor_name || "Tutor",
+          tutorId: b.tutor_id,
+          avatar: (b.tutor_name || "T").charAt(0).toUpperCase(),
+          color: color,
+          question: relatedQuestion ? relatedQuestion.title : "Question",
+          questionId: b.question_id,
+          rate: rateStr,
+          bidPrice: bidAmt,
+          message: b.message || "",
+          rating: 4.8,
+          reviews: 12,
+          status: b.accepted ? "accepted" : (declinedBidIds.includes(b.id) ? "declined" : "pending"),
+          submittedAt: b.created_at,
+          isVerified: true
+        };
+      });
+
+      setBids(mappedBids);
     } catch (err) {
       console.error("Error loading student questions:", err);
     } finally {
@@ -1403,6 +1421,22 @@ export default function StudentDashboard({ user, onUpdateProfile }) {
 
   useEffect(() => {
     fetchQuestions();
+
+    if (user?.id) {
+      const channel = supabase
+        .channel(`student-updates-${user.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'bids' }, () => {
+          fetchQuestions();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'questions' }, () => {
+          fetchQuestions();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [user?.id]);
 
   const pendingBidsCount = bids.filter((b) => b.status === "pending").length;

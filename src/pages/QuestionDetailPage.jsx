@@ -545,7 +545,7 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
     setSubmittingBid(true);
     const finalPrice = question.isPaid ? parseFloat(bidPrice || 0) : 0;
     const { error } = await supabase.from('bids').insert({
-      question_id: Number(id),
+      question_id: String(id),
       tutor_id: user.id,
       tutor_name: user.name,
       bid_price: finalPrice,
@@ -557,7 +557,7 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
       setBidPrice("");
       fetchBids();
     } else {
-      alert("Error submitting bid.");
+      alert("Error submitting bid: " + (error.message || "Unknown error"));
     }
     setSubmittingBid(false);
   };

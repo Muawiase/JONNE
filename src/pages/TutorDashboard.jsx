@@ -1248,6 +1248,49 @@ export default function TutorDashboard({ user, onUpdateProfile }) {
   const [allQuestions, setAllQuestions] = useState([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
 
+  // Fetch tutor's real bids from Supabase
+  const fetchTutorBids = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const { data: bidsData, error } = await supabase
+        .from('bids')
+        .select('*')
+        .eq('tutor_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (!error && bidsData) {
+        const { data: qData } = await supabase.from('questions').select('id, title');
+        const qMap = {};
+        if (qData) {
+          qData.forEach(q => { qMap[String(q.id)] = q.title; });
+        }
+
+        const mapped = bidsData.map(b => {
+          const bidAmt = b.bid_price !== undefined && b.bid_price !== null ? b.bid_price : (b.amount || 0);
+          return {
+            id: b.id,
+            questionId: b.question_id,
+            questionTitle: qMap[String(b.question_id)] || `Question #${b.question_id}`,
+            bidPrice: bidAmt,
+            message: b.message || "",
+            status: b.accepted ? "accepted" : "pending",
+            submittedAt: b.created_at ? new Date(b.created_at).toISOString().split("T")[0] : "Today",
+            chatOpen: !!b.accepted,
+          };
+        });
+
+        setBids(mapped);
+        try {
+          localStorage.setItem("jonne_tutor_bids", JSON.stringify(mapped));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching tutor bids:", err);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     const fetchQuestions = async () => {
       setLoadingQuestions(true);
@@ -1265,7 +1308,25 @@ export default function TutorDashboard({ user, onUpdateProfile }) {
       setLoadingQuestions(false);
     };
     fetchQuestions();
-  }, []);
+    fetchTutorBids();
+
+    if (user?.id) {
+      const channel = supabase
+        .channel(`tutor-bids-realtime-${user.id}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'bids' },
+          () => {
+            fetchTutorBids();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user?.id, fetchTutorBids]);
 
   const [profile, setProfile] = useState({
     name: user?.name || (user?.email ? user.email.split('@')[0] : "marcus"),
@@ -1280,8 +1341,8 @@ export default function TutorDashboard({ user, onUpdateProfile }) {
 
   // Action: Add Bid from Browse Page
   const handleAddBid = async (newBidData) => {
-    const { data, error } = await supabase.from('bids').insert({
-      question_id: Number(newBidData.questionId),
+    const { error } = await supabase.from('bids').insert({
+      question_id: String(newBidData.questionId),
       tutor_id: user.id,
       tutor_name: user.name,
       bid_price: Number(newBidData.bidPrice),
@@ -1293,21 +1354,7 @@ export default function TutorDashboard({ user, onUpdateProfile }) {
       return;
     }
 
-    const insertedBid = data && data[0] ? data[0] : null;
-    const dbBidId = insertedBid ? insertedBid.id : Date.now();
-
-    const newBidObj = {
-      id: dbBidId,
-      questionId: newBidData.questionId,
-      questionTitle: newBidData.questionTitle,
-      bidPrice: newBidData.bidPrice,
-      message: newBidData.message,
-      status: "pending",
-      submittedAt: new Date().toISOString().split("T")[0],
-      chatOpen: false,
-    };
-    const updatedBids = [newBidObj, ...bids];
-    updateBids(updatedBids);
+    fetchTutorBids();
 
     // Send a notification alert
     const newNotif = {
@@ -1319,7 +1366,7 @@ export default function TutorDashboard({ user, onUpdateProfile }) {
       icon: "",
       color: "#2196F3",
     };
-    setNotifications([newNotif, ...notifications]);
+    setNotifications((prev) => [newNotif, ...prev]);
   };
 
   // Action: React to a student accepting a bid (called from localStorage event)
