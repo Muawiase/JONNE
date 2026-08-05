@@ -12,6 +12,7 @@ import TutorProfilePage from "./pages/TutorProfilePage";
 import StudentDashboard from "./pages/StudentDashboard";
 import TutorDashboard from "./pages/TutorDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import AddAdministratorPage from "./pages/AddAdministratorPage";
 import GuestModal from "./components/GuestModal";
 import AuthOverlayLayout from "./components/AuthOverlayLayout";
 import { mockUsers } from "./mockData";
@@ -248,6 +249,14 @@ export default function App() {
         <Route
           path="/dashboard/admin"
           element={user?.role === "admin" ? <AdminDashboard user={user} onUpdateProfile={updateProfile} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/admin/add-administrator"
+          element={<AddAdministratorPage user={user} />}
+        />
+        <Route
+          path="/dashboard/admin/add-administrator"
+          element={<AddAdministratorPage user={user} />}
         />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/faq" element={<FAQPage />} />

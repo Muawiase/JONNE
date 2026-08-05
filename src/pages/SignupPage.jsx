@@ -33,6 +33,12 @@ export default function SignupPage({ onLogin, user, modal = false }) {
       return;
     }
 
+    if (role !== "student" && role !== "tutor") {
+      setErrorMsg("Public registration only allows Student and Tutor account creation.");
+      setSubmitted(false);
+      return;
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -125,12 +131,12 @@ export default function SignupPage({ onLogin, user, modal = false }) {
 
           <div className="form-group">
             <label className="form-label">I am a…</label>
-            <div className="role-selector">
+            <div className="role-selector" style={{ gridTemplateColumns: "1fr 1fr" }}>
               <button
                 type="button"
                 className={`role-btn ${role === "student" ? "active" : ""}`}
                 onClick={() => setRole("student")}
-                style={{ padding: "8px 4px", fontSize: "12px" }}
+                style={{ padding: "10px 4px", fontSize: "13px" }}
               >
                 Student / Learner
               </button>
@@ -138,25 +144,15 @@ export default function SignupPage({ onLogin, user, modal = false }) {
                 type="button"
                 className={`role-btn ${role === "tutor" ? "active" : ""}`}
                 onClick={() => setRole("tutor")}
-                style={{ padding: "8px 4px", fontSize: "12px" }}
+                style={{ padding: "10px 4px", fontSize: "13px" }}
               >
                 Tutor / Helper
-              </button>
-              <button
-                type="button"
-                className={`role-btn ${role === "admin" ? "active" : ""}`}
-                onClick={() => setRole("admin")}
-                style={{ padding: "8px 4px", fontSize: "12px" }}
-              >
-                Admin
               </button>
             </div>
             <p className="form-hint">
               {role === "student"
                 ? "You'll be able to post questions and find help."
-                : role === "tutor"
-                ? "You'll be able to browse questions and offer your expertise."
-                : "Full access to platform diagnostics and configuration panels."}
+                : "You'll be able to browse questions and offer your expertise."}
             </p>
           </div>
 

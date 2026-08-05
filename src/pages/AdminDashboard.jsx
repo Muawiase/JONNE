@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { createClient } from "@supabase/supabase-js";
 import {
   mockTutors,
   subjects as initialSubjects,
@@ -18,7 +19,8 @@ import {
   Settings,
   Plus,
   Ban,
-  UserCheck
+  UserCheck,
+  UserPlus
 } from "lucide-react";
 
 // Expanded initial users list for the management screen
@@ -99,6 +101,13 @@ export default function AdminDashboard({ user }) {
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUser, setNewUser] = useState({ name: "", email: "", role: "student" });
 
+  // Add Administrator State
+  const [showAddAdmin, setShowAddAdmin] = useState(false);
+  const [newAdmin, setNewAdmin] = useState({ name: "", email: "", password: "" });
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState("");
+  const [adminSuccess, setAdminSuccess] = useState("");
+
   // Add Category State
   const [newCategory, setNewCategory] = useState({ name: "", icon: "" });
 
@@ -124,19 +133,117 @@ export default function AdminDashboard({ user }) {
   const handleAddUser = (e) => {
     e.preventDefault();
     if (!newUser.name || !newUser.email) return;
+    const selectedRole = newUser.role === "admin" ? "student" : newUser.role;
     const userObj = {
       id: Date.now(),
       name: newUser.name,
       email: newUser.email,
-      role: newUser.role,
+      role: selectedRole,
       status: "Active",
       joinedAt: new Date().toISOString().split("T")[0],
-      avatar: newUser.role === "tutor" ? "" : newUser.role === "admin" ? "" : "",
-      color: newUser.role === "tutor" ? "#4CAF50" : newUser.role === "admin" ? "#2C3E50" : "#6C63FF"
+      avatar: selectedRole === "tutor" ? "" : "",
+      color: selectedRole === "tutor" ? "#4CAF50" : "#6C63FF"
     };
     setUsers([userObj, ...users]);
     setNewUser({ name: "", email: "", role: "student" });
     setShowAddUser(false);
+  };
+
+  const handleAddAdmin = async (e) => {
+    e.preventDefault();
+    setAdminError("");
+    setAdminSuccess("");
+
+    if (!newAdmin.name || !newAdmin.email || !newAdmin.password) {
+      setAdminError("Please fill out all required fields.");
+      return;
+    }
+    if (newAdmin.password.length < 6) {
+      setAdminError("Password must be at least 6 characters long.");
+      return;
+    }
+
+    setAdminLoading(true);
+
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      const tempSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: { persistSession: false }
+      });
+
+      const { data: authData, error: authErr } = await tempSupabase.auth.signUp({
+        email: newAdmin.email,
+        password: newAdmin.password,
+        options: {
+          data: {
+            role: "admin",
+            full_name: newAdmin.name,
+            name: newAdmin.name,
+          }
+        }
+      });
+
+      if (authErr) {
+        setAdminError(authErr.message);
+        setAdminLoading(false);
+        return;
+      }
+
+      const newUserId = authData?.user?.id;
+
+      if (newUserId) {
+        try {
+          await supabase.from("users").upsert({
+            id: newUserId,
+            email: newAdmin.email,
+            full_name: newAdmin.name,
+            name: newAdmin.name,
+            role: "admin",
+            status: "Active",
+            created_at: new Date().toISOString()
+          });
+        } catch (e) {
+          console.warn("Could not insert into users table:", e);
+        }
+
+        try {
+          await supabase.from("profiles").upsert({
+            id: newUserId,
+            email: newAdmin.email,
+            full_name: newAdmin.name,
+            role: "admin",
+            updated_at: new Date().toISOString()
+          });
+        } catch (e) {
+          console.warn("Could not insert into profiles table:", e);
+        }
+      }
+
+      const userObj = {
+        id: newUserId || Date.now(),
+        name: newAdmin.name,
+        email: newAdmin.email,
+        role: "admin",
+        status: "Active",
+        joinedAt: new Date().toISOString().split("T")[0],
+        avatar: "",
+        color: "#2C3E50"
+      };
+
+      setUsers([userObj, ...users]);
+      setAdminSuccess(`Administrator ${newAdmin.name} created successfully in Supabase Auth!`);
+      setNewAdmin({ name: "", email: "", password: "" });
+      setTimeout(() => {
+        setShowAddAdmin(false);
+        setAdminSuccess("");
+      }, 2000);
+    } catch (err) {
+      setAdminError(err.message || "Failed to create Administrator.");
+    } finally {
+      setAdminLoading(false);
+    }
   };
 
   // Questions handlers
@@ -649,10 +756,16 @@ export default function AdminDashboard({ user }) {
                     <option value="admin">Admins</option>
                   </select>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowAddUser(true)} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                  <Plus size={16} />
-                  Add User
-                </button>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button className="btn btn-primary" onClick={() => setShowAddAdmin(true)} style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "#2C3E50" }}>
+                    <UserPlus size={16} />
+                    Add Administrator
+                  </button>
+                  <button className="btn btn-outline" onClick={() => setShowAddUser(true)} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                    <Plus size={16} />
+                    Add User
+                  </button>
+                </div>
               </div>
 
               {/* Users Table */}
@@ -721,11 +834,81 @@ export default function AdminDashboard({ user }) {
                 </div>
               </div>
 
-              {/* Add User Modal */}
+              {/* Add Administrator Modal */}
+              {showAddAdmin && (
+                <div className="admin-modal-overlay">
+                  <div className="admin-modal">
+                    <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, display: "flex", alignItems: "center", gap: "8px" }}>
+                      <UserPlus size={20} color="#2C3E50" />
+                      Add Administrator Account
+                    </h3>
+                    <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 20 }}>
+                      This will register a new Administrator user in Supabase Auth and assign the "admin" role.
+                    </p>
+
+                    {adminError && (
+                      <div style={{ backgroundColor: "#fee2e2", color: "#b91c1c", padding: "10px 14px", borderRadius: "6px", marginBottom: "16px", fontSize: "13px" }}>
+                        {adminError}
+                      </div>
+                    )}
+
+                    {adminSuccess && (
+                      <div style={{ backgroundColor: "#dcfce7", color: "#15803d", padding: "10px 14px", borderRadius: "6px", marginBottom: "16px", fontSize: "13px" }}>
+                        {adminSuccess}
+                      </div>
+                    )}
+
+                    <form onSubmit={handleAddAdmin}>
+                      <div className="admin-input-group">
+                        <label className="admin-label">Full Name</label>
+                        <input
+                          type="text"
+                          required
+                          className="admin-input"
+                          placeholder="e.g. Sarah Jenkins"
+                          value={newAdmin.name}
+                          onChange={(e) => setNewAdmin({ ...newAdmin, name: e.target.value })}
+                        />
+                      </div>
+                      <div className="admin-input-group">
+                        <label className="admin-label">Email Address</label>
+                        <input
+                          type="email"
+                          required
+                          className="admin-input"
+                          placeholder="admin.sarah@jonne.com"
+                          value={newAdmin.email}
+                          onChange={(e) => setNewAdmin({ ...newAdmin, email: e.target.value })}
+                        />
+                      </div>
+                      <div className="admin-input-group">
+                        <label className="admin-label">Password</label>
+                        <input
+                          type="password"
+                          required
+                          minLength={6}
+                          className="admin-input"
+                          placeholder="At least 6 characters"
+                          value={newAdmin.password}
+                          onChange={(e) => setNewAdmin({ ...newAdmin, password: e.target.value })}
+                        />
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 24 }}>
+                        <button type="button" className="btn btn-outline" style={{ borderRadius: 4 }} onClick={() => setShowAddAdmin(false)}>Cancel</button>
+                        <button type="submit" className="btn btn-primary" disabled={adminLoading} style={{ borderRadius: 4, background: "#2C3E50" }}>
+                          {adminLoading ? "Creating..." : "Create Administrator"}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* Add Standard User Modal */}
               {showAddUser && (
                 <div className="admin-modal-overlay">
                   <div className="admin-modal">
-                    <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20 }}> Create New Mock Account</h3>
+                    <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20 }}> Create New Account</h3>
                     <form onSubmit={handleAddUser}>
                       <div className="admin-input-group">
                         <label className="admin-label">Full Name</label>
@@ -758,7 +941,6 @@ export default function AdminDashboard({ user }) {
                         >
                           <option value="student">Student / Learner</option>
                           <option value="tutor">Tutor / Helper</option>
-                          <option value="admin">System Administrator</option>
                         </select>
                       </div>
                       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 24 }}>
