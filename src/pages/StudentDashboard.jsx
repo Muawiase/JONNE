@@ -748,39 +748,39 @@ function MyQuestionsSection({ myQuestions, loading }) {
   );
 }
 
-function BidsSection({ bids, setBids, notifications, setNotifications }) {
+function BidsSection({ bids = [], setBids = () => {}, notifications = [], setNotifications = () => {} }) {
   const [selected, setSelected] = useState(null);
-  const pending = bids.filter((b) => b.status === "pending");
-  const accepted = bids.filter((b) => b.status === "accepted");
-  const declined = bids.filter((b) => b.status === "declined");
+  const safeBids = Array.isArray(bids) ? bids : [];
+  const pending = safeBids.filter((b) => b && b.status === "pending");
+  const accepted = safeBids.filter((b) => b && b.status === "accepted");
+  const declined = safeBids.filter((b) => b && b.status === "declined");
 
   const handleAccept = async (bid) => {
+    if (!bid || !bid.id) return;
     const { error } = await supabase.from('bids').update({ accepted: true }).eq('id', bid.id);
     if (!error) {
-      // Update bid status
-      setBids((prev) => prev.map((b) => b.id === bid.id ? { ...b, status: "accepted" } : b));
+      setBids((prev) => (Array.isArray(prev) ? prev : []).map((b) => b.id === bid.id ? { ...b, status: "accepted" } : b));
 
-      // Notify student
+      const qTitle = typeof bid.question === "string" ? bid.question : "Question";
       const notif = {
         id: Date.now(),
         type: "bid_accepted",
         icon: "",
         color: "#4CAF50",
         title: "Bid accepted!",
-        body: `You accepted ${bid.tutor}'s bid for "${bid.question.slice(0, 50)}...". Chat is now open!`,
+        body: `You accepted ${bid.tutor || "Tutor"}'s bid for "${qTitle.slice(0, 50)}...". Chat is now open!`,
         time: "Just now",
         read: false,
       };
-      setNotifications((prev) => [notif, ...prev]);
-
-      // Persist event so TutorDashboard can react
+      setNotifications((prev) => [notif, ...(Array.isArray(prev) ? prev : [])]);
       saveAcceptedBidEvent(bid);
     } else {
-      alert("Error accepting bid: " + error.message);
+      alert("Error accepting bid: " + (error?.message || "Unknown error"));
     }
   };
 
   const handleDecline = (bidId) => {
+    if (!bidId) return;
     try {
       const declinedIds = JSON.parse(localStorage.getItem("jonne_declined_bids") || "[]");
       if (!declinedIds.includes(bidId)) {
@@ -790,8 +790,10 @@ function BidsSection({ bids, setBids, notifications, setNotifications }) {
     } catch (e) {
       console.warn("localStorage decline error", e);
     }
-    setBids((prev) => prev.map((b) => b.id === bidId ? { ...b, status: "declined" } : b));
+    setBids((prev) => (Array.isArray(prev) ? prev : []).map((b) => b.id === bidId ? { ...b, status: "declined" } : b));
   };
+
+  const hasBids = pending.length > 0 || accepted.length > 0 || declined.length > 0;
 
   return (
     <div className="sd-section">
@@ -804,45 +806,60 @@ function BidsSection({ bids, setBids, notifications, setNotifications }) {
         <>
           <h2 className="sd-subheading"> Pending Bids ({pending.length})</h2>
           <div className="sd-bids-grid">
-            {pending.map((bid) => (
-              <div className={`sd-bid-card ${selected === bid.id ? "sd-bid-selected" : ""}`} key={bid.id} onClick={() => setSelected(bid.id === selected ? null : bid.id)}>
-                <div className="sd-bid-header">
-                  <div className="sd-bid-avatar" style={{ background: bid.color + "22", color: bid.color }}>{bid.avatar}</div>
-                  <div className="sd-bid-info">
-                    <div className="sd-bid-name">{bid.tutor} {bid.isVerified && <span className="sd-verified-tag"> Verified</span>}</div>
-                    <div className="sd-bid-rating"> {bid.rating} · {bid.reviews} reviews</div>
+            {pending.map((bid) => {
+              const qTitle = typeof bid.question === "string" ? bid.question : "Question";
+              const qId = bid.questionId || bid.question_id;
+              const rateVal = bid.rate || (bid.bidPrice ? `$${bid.bidPrice}/hr` : "FREE");
+              const avatarText = bid.avatar || (bid.tutor ? bid.tutor.charAt(0).toUpperCase() : "T");
+              const tutorName = bid.tutor || "Tutor";
+              return (
+                <div
+                  className={`sd-bid-card ${selected === bid.id ? "sd-bid-selected" : ""}`}
+                  key={bid.id || Math.random()}
+                  onClick={() => setSelected(bid.id === selected ? null : bid.id)}
+                >
+                  <div className="sd-bid-header">
+                    <div className="sd-bid-avatar" style={{ background: (bid.color || "#6C63FF") + "22", color: bid.color || "#6C63FF" }}>
+                      {avatarText}
+                    </div>
+                    <div className="sd-bid-info">
+                      <div className="sd-bid-name">{tutorName} {bid.isVerified && <span className="sd-verified-tag"> Verified</span>}</div>
+                      <div className="sd-bid-rating"> {bid.rating || "4.8"} · {bid.reviews || 10} reviews</div>
+                    </div>
+                    <div className="sd-bid-rate" style={{ background: rateVal === "FREE" ? "#4CAF5018" : "#2196F318", color: rateVal === "FREE" ? "#4CAF50" : "#2196F3" }}>
+                      {rateVal}
+                    </div>
                   </div>
-                  <div className="sd-bid-rate" style={{ background: bid.rate === "FREE" ? "#4CAF5018" : "#2196F318", color: bid.rate === "FREE" ? "#4CAF50" : "#2196F3" }}>
-                    {bid.rate}
-                  </div>
-                </div>
-                <div className="sd-bid-question">For: "{bid.question.slice(0, 55)}..."</div>
-                <p className="sd-bid-message">"{bid.message}"</p>
-                <div className="sd-bid-actions">
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={(e) => { e.stopPropagation(); handleAccept(bid); }}
-                    style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
-                  >
-                    <CheckCircle2 size={14} />
-                    Accept Bid
-                  </button>
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={(e) => { e.stopPropagation(); handleDecline(bid.id); }}
-                    style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
-                  >
-                    <X size={14} />
-                    Decline
-                  </button>
-                  <Link to={`/question/${bid.questionId}`} style={{ display: "inline-flex" }}>
-                    <button className="btn btn-sm" style={{ background: "#f5f5f5", color: "#404040", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                      View Q <ArrowRight size={14} />
+                  <div className="sd-bid-question">For: "{qTitle.slice(0, 55)}..."</div>
+                  <p className="sd-bid-message">"{bid.message || ""}"</p>
+                  <div className="sd-bid-actions">
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={(e) => { e.stopPropagation(); handleAccept(bid); }}
+                      style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
+                    >
+                      <CheckCircle2 size={14} />
+                      Accept Bid
                     </button>
-                  </Link>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={(e) => { e.stopPropagation(); handleDecline(bid.id); }}
+                      style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
+                    >
+                      <X size={14} />
+                      Decline
+                    </button>
+                    {qId && (
+                      <Link to={`/question/${qId}`} style={{ display: "inline-flex" }}>
+                        <button className="btn btn-sm" style={{ background: "#f5f5f5", color: "#404040", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                          View Q <ArrowRight size={14} />
+                        </button>
+                      </Link>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}
@@ -851,34 +868,43 @@ function BidsSection({ bids, setBids, notifications, setNotifications }) {
         <>
           <h2 className="sd-subheading" style={{ marginTop: 32 }}> Accepted Bids ({accepted.length})</h2>
           <div className="sd-bids-grid">
-            {accepted.map((bid) => (
-              <div className="sd-bid-card sd-bid-accepted" key={bid.id}>
-                <div className="sd-bid-header">
-                  <div className="sd-bid-avatar" style={{ background: bid.color + "22", color: bid.color }}>{bid.avatar}</div>
-                  <div className="sd-bid-info">
-                    <div className="sd-bid-name">{bid.tutor} {bid.isVerified && <span className="sd-verified-tag"> Verified</span>}</div>
-                    <div className="sd-bid-rating"> {bid.rating} · {bid.reviews} reviews</div>
+            {accepted.map((bid) => {
+              const qTitle = typeof bid.question === "string" ? bid.question : "Question";
+              const qId = bid.questionId || bid.question_id;
+              const avatarText = bid.avatar || (bid.tutor ? bid.tutor.charAt(0).toUpperCase() : "T");
+              const tutorName = bid.tutor || "Tutor";
+              return (
+                <div className="sd-bid-card sd-bid-accepted" key={bid.id || Math.random()}>
+                  <div className="sd-bid-header">
+                    <div className="sd-bid-avatar" style={{ background: (bid.color || "#6C63FF") + "22", color: bid.color || "#6C63FF" }}>
+                      {avatarText}
+                    </div>
+                    <div className="sd-bid-info">
+                      <div className="sd-bid-name">{tutorName} {bid.isVerified && <span className="sd-verified-tag"> Verified</span>}</div>
+                      <div className="sd-bid-rating"> {bid.rating || "4.8"} · {bid.reviews || 10} reviews</div>
+                    </div>
+                    <div className="sd-bid-rate" style={{ background: "#4CAF5018", color: "#4CAF50" }}> Accepted</div>
                   </div>
-                  <div className="sd-bid-rate" style={{ background: "#4CAF5018", color: "#4CAF50" }}> Accepted</div>
+                  <div className="sd-bid-question">For: "{qTitle.slice(0, 55)}..."</div>
+                  <p className="sd-bid-message">"{bid.message || ""}"</p>
+                  <div style={{ background: "linear-gradient(135deg, #E8F5E9, #F1F8E9)", border: "1px solid #A5D6A7", borderRadius: "var(--radius-md)", padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#2E7D32", fontWeight: 600 }}>
+                    Chat is now open with {tutorName}!
+                  </div>
+                  <div className="sd-bid-actions">
+                    {qId && (
+                      <Link to={`/question/${qId}`} className="btn btn-primary btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        <MessageSquare size={14} />
+                        Open Chat
+                      </Link>
+                    )}
+                    <button className="btn btn-secondary btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                      <Calendar size={14} />
+                      Schedule Session
+                    </button>
+                  </div>
                 </div>
-                <div className="sd-bid-question">For: "{bid.question.slice(0, 55)}..."</div>
-                <p className="sd-bid-message">"{bid.message}"</p>
-                {/* Chat is unlocked once bid is accepted */}
-                <div style={{ background: "linear-gradient(135deg, #E8F5E9, #F1F8E9)", border: "1px solid #A5D6A7", borderRadius: "var(--radius-md)", padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#2E7D32", fontWeight: 600 }}>
-                   Chat is now open with {bid.tutor}!
-                </div>
-                <div className="sd-bid-actions">
-                  <Link to={`/question/${bid.questionId}`} className="btn btn-primary btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                    <MessageSquare size={14} />
-                    Open Chat
-                  </Link>
-                  <button className="btn btn-secondary btn-sm" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                    <Calendar size={14} />
-                    Schedule Session
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}
@@ -887,27 +913,34 @@ function BidsSection({ bids, setBids, notifications, setNotifications }) {
         <>
           <h2 className="sd-subheading" style={{ marginTop: 32 }}> Declined Bids ({declined.length})</h2>
           <div className="sd-bids-grid">
-            {declined.map((bid) => (
-              <div className="sd-bid-card" key={bid.id} style={{ opacity: 0.6 }}>
-                <div className="sd-bid-header">
-                  <div className="sd-bid-avatar" style={{ background: bid.color + "22", color: bid.color }}>{bid.avatar}</div>
-                  <div className="sd-bid-info">
-                    <div className="sd-bid-name">{bid.tutor}</div>
-                    <div className="sd-bid-rating"> {bid.rating} · {bid.reviews} reviews</div>
+            {declined.map((bid) => {
+              const qTitle = typeof bid.question === "string" ? bid.question : "Question";
+              const avatarText = bid.avatar || (bid.tutor ? bid.tutor.charAt(0).toUpperCase() : "T");
+              const tutorName = bid.tutor || "Tutor";
+              return (
+                <div className="sd-bid-card" key={bid.id || Math.random()} style={{ opacity: 0.6 }}>
+                  <div className="sd-bid-header">
+                    <div className="sd-bid-avatar" style={{ background: (bid.color || "#6C63FF") + "22", color: bid.color || "#6C63FF" }}>
+                      {avatarText}
+                    </div>
+                    <div className="sd-bid-info">
+                      <div className="sd-bid-name">{tutorName}</div>
+                      <div className="sd-bid-rating"> {bid.rating || "4.8"} · {bid.reviews || 10} reviews</div>
+                    </div>
+                    <div className="sd-bid-rate" style={{ background: "#FFEBEE", color: "#F44336" }}>Declined</div>
                   </div>
-                  <div className="sd-bid-rate" style={{ background: "#FFEBEE", color: "#F44336" }}>Declined</div>
+                  <div className="sd-bid-question">For: "{qTitle.slice(0, 55)}..."</div>
+                  <p className="sd-bid-message">"{bid.message || ""}"</p>
                 </div>
-                <div className="sd-bid-question">For: "{bid.question.slice(0, 55)}..."</div>
-                <p className="sd-bid-message">"{bid.message}"</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}
 
-      {bids.length === 0 && (
+      {!hasBids && (
         <div style={{ padding: 40, textAlign: "center", color: "var(--text-muted)", background: "white", borderRadius: "var(--radius-md)" }}>
-           No bids yet. Tutors will start bidding on your questions soon!
+          No bids yet. Tutors will start bidding on your questions soon!
         </div>
       )}
     </div>
@@ -1476,14 +1509,16 @@ export default function StudentDashboard({ user, onUpdateProfile }) {
         const relatedQuestion = qList.find((q) => String(q.id) === String(b.question_id));
         const bidAmt = b.bid_price !== undefined && b.bid_price !== null ? b.bid_price : (b.amount || 0);
         const rateStr = Number(bidAmt) === 0 ? "FREE" : `$${bidAmt}/hr`;
-        const color = "#" + Math.floor(Math.abs(Math.sin(b.tutor_id ? b.tutor_id.charCodeAt(0) : 1) * 16777215)).toString(16).padStart(6, '0');
+        const tutorIdStr = String(b.tutor_id || "");
+        const charCode = tutorIdStr.length > 0 ? tutorIdStr.charCodeAt(0) : 1;
+        const color = "#" + Math.floor(Math.abs(Math.sin(charCode) * 16777215)).toString(16).padStart(6, '0');
         return {
           id: b.id,
           tutor: b.tutor_name || "Tutor",
           tutorId: b.tutor_id,
           avatar: (b.tutor_name || "T").charAt(0).toUpperCase(),
           color: color,
-          question: relatedQuestion ? relatedQuestion.title : "Question",
+          question: relatedQuestion?.title || b.question || "Question",
           questionId: b.question_id,
           rate: rateStr,
           bidPrice: bidAmt,
