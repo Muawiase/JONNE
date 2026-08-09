@@ -62,6 +62,8 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [downloadingPostId, setDownloadingPostId] = useState(null);
+  const [downloadError, setDownloadError] = useState({});
   const fileInputRef = useRef(null);
 
   const canPost = Boolean(user);
@@ -176,35 +178,31 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
   };
 
   async function uploadKnowledgeFile(file) {
-    const isImg = file.type.startsWith("image/");
-
-    if (isImg) {
-      const compressedDataUrl = await compressImageFile(file);
-      if (compressedDataUrl) return compressedDataUrl;
-    }
-
-    const ext = file.name.split(".").pop() || "bin";
-    const path = `posts/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const cleanFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `posts/${Date.now()}_${cleanFileName}`;
 
     try {
-      const { error } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("knowledge-files")
         .upload(path, file, { upsert: false });
 
-      if (!error) {
-        const { data } = supabase.storage.from("knowledge-files").getPublicUrl(path);
-        if (data?.publicUrl) return data.publicUrl;
+      if (uploadError) {
+        console.error("Supabase Storage upload error:", uploadError);
+        throw uploadError;
+      }
+
+      const { data: urlData } = supabase.storage.from("knowledge-files").getPublicUrl(path);
+      if (urlData?.publicUrl) {
+        return urlData.publicUrl;
       }
     } catch (err) {
       console.warn("Storage upload exception:", err);
+      if (file.type.startsWith("image/")) {
+        const compressedDataUrl = await compressImageFile(file);
+        if (compressedDataUrl) return compressedDataUrl;
+      }
+      throw new Error("Could not upload file to storage. " + (err.message || "Please try again."));
     }
-
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (e) => reject(e);
-      reader.readAsDataURL(file);
-    });
   }
 
   async function refreshPostsFeed() {
@@ -602,11 +600,6 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
     if (postImageOverride[post.id]) {
       return postImageOverride[post.id];
     }
-    // If file_url points to an unconfigured Supabase storage bucket URL from prior uploads
-    if (post.file_url.includes("knowledge-files/posts/")) {
-      const isCoding = post.content?.toLowerCase().includes("w3schools") || post.content?.toLowerCase().includes("code");
-      return isCoding ? FALLBACK_CODING_IMAGE : FALLBACK_STUDY_IMAGE;
-    }
     return post.file_url;
   };
 
@@ -631,13 +624,87 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
   }, [activeLightboxImage]);
 
   const getFileNameFromUrl = (url) => {
-    if (!url) return "Attached File";
+    if (!url || typeof url !== "string") return "Attached File";
+    if (url.startsWith("data:")) return "Attached File";
     try {
-      const cleanUrl = url.split("?")[0];
-      const rawName = cleanUrl.split("/").pop() || "Attached File";
-      return rawName.replace(/^\d+_[a-z0-9]+_/, "").replace(/^\d+_/, "") || rawName;
+      const cleanUrl = url.split("?")[0].split("#")[0];
+      const rawName = decodeURIComponent(cleanUrl.split("/").pop() || "Attached File");
+      const cleanName = rawName.replace(/^\d+_[a-z0-9]+_/, "").replace(/^\d+_/, "");
+      return cleanName || rawName;
     } catch {
       return "Attached File";
+    }
+  };
+
+  const handleDownloadFile = async (post) => {
+    const postObj = typeof post === "string" ? { id: post, file_url: post } : post;
+    if (!postObj || !postObj.file_url) {
+      if (postObj?.id) {
+        setDownloadError((prev) => ({ ...prev, [postObj.id]: "No file attached to this post." }));
+      }
+      return;
+    }
+
+    const postId = postObj.id || "temp-download";
+    setDownloadingPostId(postId);
+    setDownloadError((prev) => ({ ...prev, [postId]: null }));
+
+    const fileName = getFileNameFromUrl(postObj.file_url) || "downloaded-file";
+
+    try {
+      let blob = null;
+
+      // Try downloading directly via Supabase Storage if it's a knowledge-files path
+      if (postObj.file_url.includes("knowledge-files/")) {
+        const pathPart = postObj.file_url.split("knowledge-files/")[1];
+        const cleanPath = pathPart ? pathPart.replace(/^public\//, "").split("?")[0] : null;
+
+        if (cleanPath) {
+          const { data, error: storageErr } = await supabase.storage
+            .from("knowledge-files")
+            .download(cleanPath);
+
+          if (!storageErr && data) {
+            blob = data;
+          }
+        }
+      }
+
+      // Fallback to fetch if supabase storage download was not used or failed
+      if (!blob) {
+        if (postObj.file_url.startsWith("data:")) {
+          const res = await fetch(postObj.file_url);
+          blob = await res.blob();
+        } else {
+          const res = await fetch(postObj.file_url);
+          if (!res.ok) {
+            throw new Error(`HTTP error! Status: ${res.status}`);
+          }
+          blob = await res.blob();
+        }
+      }
+
+      if (!blob) {
+        throw new Error("File data could not be loaded.");
+      }
+
+      // Trigger browser file download with preserved filename
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error("File download failed:", err);
+      setDownloadError((prev) => ({
+        ...prev,
+        [postId]: "Failed to download file. The file may be missing or inaccessible.",
+      }));
+    } finally {
+      setDownloadingPostId(null);
     }
   };
 
@@ -908,22 +975,36 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
                               </div>
                             </div>
                           ) : (
-                            <div className="post-file-download-box">
-                              <div className="file-info-col">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
-                                <span className="download-filename">{getFileNameFromUrl(post.file_url)}</span>
+                            <>
+                              <div className="post-file-download-box">
+                                <div className="file-info-col">
+                                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                                  <span className="download-filename">{getFileNameFromUrl(post.file_url)}</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadFile(post)}
+                                  disabled={downloadingPostId === post.id}
+                                  className="btn btn-sm btn-secondary download-btn"
+                                >
+                                  {downloadingPostId === post.id ? (
+                                    <>
+                                      <span className="spinner-sm"></span> Downloading...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                      Download File
+                                    </>
+                                  )}
+                                </button>
                               </div>
-                              <a
-                                href={post.file_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                download
-                                className="btn btn-sm btn-secondary download-btn"
-                              >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                Download File
-                              </a>
-                            </div>
+                              {downloadError[post.id] && (
+                                <div className="knowledge-alert error download-error-alert" style={{ marginTop: "8px", fontSize: "0.85rem" }}>
+                                  {downloadError[post.id]}
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       );
@@ -1092,16 +1173,14 @@ export default function KnowledgeHubPage({ user, onGuestAction }) {
             <div className="lightbox-header">
               <span className="lightbox-title">{activeLightboxImage.name}</span>
               <div className="lightbox-actions">
-                <a
-                  href={activeLightboxImage.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  download
+                <button
+                  type="button"
+                  onClick={() => handleDownloadFile({ id: "lightbox", file_url: activeLightboxImage.url })}
                   className="lightbox-btn"
                   title="Download Image"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                </a>
+                </button>
                 <button
                   type="button"
                   className="lightbox-btn close-btn"
