@@ -453,7 +453,7 @@ export default function AIStudyAssistantPage({ user }) {
       <style>{`
         .ai-page { padding-bottom: 0; min-height: calc(100vh - 72px); display: flex; flex-direction: column; }
         .ai-container { flex: 1; display: flex; flex-direction: column; padding-bottom: 32px; max-width: 860px; }
-        .ai-page-header { background: linear-gradient(135deg,#4F46E5 0%,#7C3AED 50%,#06B6D4 100%); padding: 32px 0 24px; }
+        .ai-page-header { background: linear-gradient(135deg,#059862 0%,#04AA6D 50%,#282A35 100%); padding: 32px 0 24px; }
         .ai-header-content { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
         .ai-header-icon { width: 50px; height: 50px; border-radius: 14px; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.3); }
         .ai-header-text { flex: 1; min-width: 0; }
@@ -468,18 +468,18 @@ export default function AIStudyAssistantPage({ user }) {
         .ai-empty-title { font-size: 19px; font-weight: 700; color: var(--text-primary); margin: 0 0 8px; }
         .ai-empty-desc { color: var(--text-muted); font-size: 14px; margin: 0 0 22px; }
         .ai-suggestions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 580px; }
-        .ai-suggestion-chip { background: var(--primary-light); color: var(--primary); border: 1px solid #C7D2FE; border-radius: 99px; padding: 7px 15px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+        .ai-suggestion-chip { background: var(--primary-light); color: var(--primary); border: 1px solid #A5D6A7; border-radius: 99px; padding: 7px 15px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
         .ai-suggestion-chip:hover { background: var(--primary); color: white; transform: translateY(-1px); }
         .ai-messages { padding: 18px; display: flex; flex-direction: column; gap: 16px; }
         .ai-message { display: flex; gap: 10px; align-items: flex-start; animation: ai-slide-in 0.22s ease; }
         @keyframes ai-slide-in { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
         .ai-message-user { flex-direction: row-reverse; }
         .ai-avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
-        .ai-avatar-bot { background: linear-gradient(135deg,#4F46E5,#06B6D4); color: white; box-shadow: 0 2px 8px rgba(79,70,229,0.3); }
+        .ai-avatar-bot { background: linear-gradient(135deg,#04AA6D,#059862); color: white; box-shadow: 0 2px 8px rgba(4,170,109,0.3); }
         .ai-avatar-user { background: linear-gradient(135deg,#F59E0B,#EF4444); color: white; box-shadow: 0 2px 8px rgba(245,158,11,0.3); }
         .ai-avatar-error { background: #FEE2E2; color: #EF4444; }
         .ai-bubble { max-width: calc(100% - 46px); border-radius: 16px; padding: 12px 16px; font-size: 14.5px; line-height: 1.65; }
-        .ai-bubble-user { background: linear-gradient(135deg,#4F46E5,#7C3AED); color: white; border-bottom-right-radius: 4px; }
+        .ai-bubble-user { background: linear-gradient(135deg,#04AA6D,#059862); color: white; border-bottom-right-radius: 4px; }
         .ai-bubble-bot { background: var(--bg-main); border: 1px solid var(--border); color: var(--text-primary); border-bottom-left-radius: 4px; }
         .ai-bubble-error { background: #FEF2F2; border: 1px solid #FECACA; color: #DC2626; border-bottom-left-radius: 4px; }
         .ai-user-text { margin: 0; color: white; }
@@ -499,7 +499,7 @@ export default function AIStudyAssistantPage({ user }) {
         .ai-md-h3 { font-size: 14px; font-weight: 600; margin: 2px 0 0; }
         .ai-md-ul,.ai-md-ol { padding-left: 18px; margin: 0; display: flex; flex-direction: column; gap: 3px; }
         .ai-md-hr { border: none; border-top: 1px solid var(--border); margin: 2px 0; }
-        .ai-inline-code { background: rgba(79,70,229,0.1); color: #4F46E5; padding: 1px 5px; border-radius: 4px; font-family: 'Courier New',monospace; font-size: 13px; font-weight: 600; }
+        .ai-inline-code { background: rgba(4,170,109,0.1); color: #059862; padding: 1px 5px; border-radius: 4px; font-family: 'Courier New',monospace; font-size: 13px; font-weight: 600; }
         .ai-code-block { border-radius: 10px; overflow: hidden; border: 1px solid var(--border); margin: 2px 0; }
         .ai-code-block-header { display: flex; align-items: center; justify-content: space-between; background: #1E1E2E; padding: 7px 12px; }
         .ai-code-lang { color: #A78BFA; font-size: 11px; font-weight: 700; font-family: monospace; text-transform: uppercase; }
@@ -508,7 +508,7 @@ export default function AIStudyAssistantPage({ user }) {
         .ai-code-pre { background: #1A1A2E; padding: 12px 14px; margin: 0; overflow-x: auto; font-family: 'Courier New',Consolas,monospace; font-size: 13px; line-height: 1.6; color: #E2E8F0; }
         .ai-input-form { display: flex; flex-direction: column; gap: 7px; margin-top: 14px; }
         .ai-input-wrapper { display: flex; align-items: flex-end; gap: 10px; background: var(--bg-card); border: 2px solid var(--border); border-radius: 14px; padding: 10px 10px 10px 16px; box-shadow: var(--shadow-sm); transition: border-color 0.2s, box-shadow 0.2s; }
-        .ai-input-wrapper:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+        .ai-input-wrapper:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(4,170,109,0.1); }
         .ai-input-wrapper--loading { opacity: 0.75; }
         .ai-textarea { flex: 1; border: none; outline: none; resize: none; background: transparent; font-size: 15px; color: var(--text-primary); line-height: 1.5; min-height: 24px; max-height: 200px; padding: 0; }
         .ai-textarea::placeholder { color: var(--text-muted); }
@@ -516,8 +516,8 @@ export default function AIStudyAssistantPage({ user }) {
         .ai-input-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
         .ai-char-count { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
         .ai-send-btn { width: 38px; height: 38px; border-radius: 10px; border: none; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
-        .ai-send-btn--active { background: linear-gradient(135deg,#4F46E5,#7C3AED); color: white; box-shadow: 0 2px 8px rgba(79,70,229,0.4); cursor: pointer; }
-        .ai-send-btn--active:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79,70,229,0.5); }
+        .ai-send-btn--active { background: linear-gradient(135deg,#04AA6D,#059862); color: white; box-shadow: 0 2px 8px rgba(4,170,109,0.4); cursor: pointer; }
+        .ai-send-btn--active:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(4,170,109,0.5); }
         .ai-send-btn--disabled { background: var(--bg-main); color: var(--text-muted); cursor: not-allowed; }
         .ai-input-hint { font-size: 12px; color: var(--text-muted); text-align: center; }
         .ai-spinner { animation: ai-spin 0.8s linear infinite; }

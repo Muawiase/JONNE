@@ -2,18 +2,18 @@
 
 /* ─── DESIGN TOKENS ─────────────────────────────────────────── */
 :root {
-  /* Modern High-Contrast Tech & Education Palette */
-  --primary: #4F46E5;          /* Royal Indigo - Authoritative & Modern */
-  --primary-dark: #3730A3;     /* Deep Indigo hover state */
-  --primary-light: #EEF2FF;    /* Indigo Tint surface */
-  --accent: #06B6D4;           /* Electric Cyan accent */
+  /* W3Schools Signature Green Palette */
+  --primary: #04AA6D;          /* W3Schools Green */
+  --primary-dark: #059862;     /* W3Schools Deep Green hover state */
+  --primary-light: #E8F5E9;    /* W3Schools Light Green surface tint */
+  --accent: #282A35;           /* W3Schools Charcoal / Navy accent */
   --accent-warm: #F59E0B;      /* Vibrant Amber ratings */
-  --success: #10B981;          /* Emerald Green */
-  --success-light: #ECFDF5;    /* Emerald Tint surface */
-  --free-color: #2563EB;       /* Blue 600 - Free Help Badge */
-  --free-bg: #DBEAFE;          /* Blue 100 */
-  --paid-color: #4F46E5;       /* Indigo 600 - Paid Help Badge */
-  --paid-bg: #E0E7FF;          /* Indigo 100 */
+  --success: #04AA6D;          /* W3Schools Green */
+  --success-light: #E8F5E9;    /* Green Tint surface */
+  --free-color: #04AA6D;       /* W3Schools Green - Free Help Badge */
+  --free-bg: #E8F5E9;          /* Light Green Tint */
+  --paid-color: #059862;       /* Deep W3 Green - Paid Help Badge */
+  --paid-bg: #E8F5E9;          /* Light Green Tint */
   --urgent-color: #E11D48;     /* Rose 600 - Urgent Badge */
   --urgent-bg: #FFE4E6;        /* Rose 100 */
   
@@ -172,7 +172,7 @@ img, video, audio, iframe, svg { max-width: 100%; height: auto; }
 /* ─── HERO ───────────────────────────────────────────────────── */
 .hero {
   background:
-    linear-gradient(135deg, rgba(79, 70, 229, 0.95) 0%, rgba(55, 48, 163, 0.92) 50%, rgba(6, 182, 212, 0.88) 100%),
+    linear-gradient(135deg, rgba(4, 170, 109, 0.95) 0%, rgba(5, 152, 98, 0.92) 50%, rgba(40, 42, 53, 0.88) 100%),
     url("/images/hero-background.webp") center center / cover no-repeat;
   color: white;
   padding: 100px 0 80px;
@@ -534,7 +534,7 @@ textarea.form-input { resize: vertical; min-height: 120px; line-height: 1.6; }
 
 /* ─── GLOBAL FOOTER ──────────────────────────────────────────── */
 .footer {
-  background: #0f0e26;
+  background: #151515;
   color: rgba(255, 255, 255, 0.7);
   padding: 60px 0 30px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -2978,7 +2978,7 @@ textarea.form-input { resize: vertical; min-height: 120px; line-height: 1.6; }
 }
 
 .knowledge-hero {
-  background: linear-gradient(135deg, #3730A3 0%, #4F46E5 50%, #06B6D4 100%);
+  background: linear-gradient(135deg, #059862 0%, #04AA6D 50%, #282A35 100%);
   color: white;
   padding: 48px 0 52px;
   text-align: center;
