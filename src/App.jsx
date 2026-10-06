@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Navbar from "./components/Navbar";
 import ScrollToTop from "./components/ScrollToTop";
@@ -26,6 +26,7 @@ import Footer from "./components/Footer";
 import { supabase } from "./supabase";
 
 export default function App() {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null); // null = guest
   const [authLoading, setAuthLoading] = useState(true);
   const [showGuestModal, setShowGuestModal] = useState(false);
@@ -48,9 +49,19 @@ export default function App() {
 
     // Subscribe to future auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         if (session?.user) {
           mergeSupabaseUser(session.user);
+          if (event === "SIGNED_IN") {
+            const role = session.user.user_metadata?.role || "student";
+            if (role === "admin") {
+              navigate("/dashboard/admin");
+            } else if (role === "tutor") {
+              navigate("/dashboard/tutor");
+            } else {
+              navigate("/dashboard/student");
+            }
+          }
         } else {
           setUser(null);
         }
@@ -59,7 +70,7 @@ export default function App() {
     );
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
   // Loads cached profile overrides from localStorage if available
   function getStoredProfile(userId) {
@@ -238,6 +249,25 @@ export default function App() {
           }
         />
         <Route path="/tutor/:id" element={<TutorProfilePage user={user} onGuestAction={() => setShowGuestModal(true)} />} />
+        <Route
+          path="/dashboard"
+          element={
+            user ? (
+              <Navigate
+                to={
+                  user.role === "admin"
+                    ? "/dashboard/admin"
+                    : user.role === "tutor"
+                    ? "/dashboard/tutor"
+                    : "/dashboard/student"
+                }
+                replace
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
         <Route
           path="/dashboard/student"
           element={user?.role === "student" ? <StudentDashboard user={user} onUpdateProfile={updateProfile} /> : <Navigate to="/login" />}

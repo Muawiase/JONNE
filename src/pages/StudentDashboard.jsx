@@ -20,7 +20,8 @@ import {
   Camera,
   Trash2,
   Edit,
-  Save
+  Save,
+  MessageSquare
 } from "lucide-react";
 
 //  MOCK DATA 
@@ -757,9 +758,9 @@ function BidsSection({ bids = [], setBids = () => {}, notifications = [], setNot
 
   const handleAccept = async (bid) => {
     if (!bid || !bid.id) return;
-    const { error } = await supabase.from('bids').update({ accepted: true }).eq('id', bid.id);
+    const { error } = await supabase.from('bids').update({ accepted: true, status: 'accepted' }).eq('id', bid.id);
     if (!error) {
-      setBids((prev) => (Array.isArray(prev) ? prev : []).map((b) => b.id === bid.id ? { ...b, status: "accepted" } : b));
+      setBids((prev) => (Array.isArray(prev) ? prev : []).map((b) => b.id === bid.id ? { ...b, status: "accepted", accepted: true } : b));
 
       const qTitle = typeof bid.question === "string" ? bid.question : "Question";
       const notif = {
@@ -779,7 +780,7 @@ function BidsSection({ bids = [], setBids = () => {}, notifications = [], setNot
     }
   };
 
-  const handleDecline = (bidId) => {
+  const handleDecline = async (bidId) => {
     if (!bidId) return;
     try {
       const declinedIds = JSON.parse(localStorage.getItem("jonne_declined_bids") || "[]");
@@ -790,6 +791,7 @@ function BidsSection({ bids = [], setBids = () => {}, notifications = [], setNot
     } catch (e) {
       console.warn("localStorage decline error", e);
     }
+    await supabase.from('bids').update({ status: 'declined' }).eq('id', bidId);
     setBids((prev) => (Array.isArray(prev) ? prev : []).map((b) => b.id === bidId ? { ...b, status: "declined" } : b));
   };
 
@@ -1512,22 +1514,24 @@ export default function StudentDashboard({ user, onUpdateProfile }) {
         const tutorIdStr = String(b.tutor_id || "");
         const charCode = tutorIdStr.length > 0 ? tutorIdStr.charCodeAt(0) : 1;
         const color = "#" + Math.floor(Math.abs(Math.sin(charCode) * 16777215)).toString(16).padStart(6, '0');
+        const isAccepted = b.accepted === true || b.status === "accepted";
+        const isDeclined = b.status === "declined" || declinedBidIds.includes(b.id);
         return {
           id: b.id,
-          tutor: b.tutor_name || "Tutor",
+          tutor: b.tutor_name || b.tutor || "Tutor",
           tutorId: b.tutor_id,
-          avatar: (b.tutor_name || "T").charAt(0).toUpperCase(),
+          avatar: (b.tutor_name || b.tutor || "T").charAt(0).toUpperCase(),
           color: color,
           question: relatedQuestion?.title || b.question || "Question",
-          questionId: b.question_id,
+          questionId: b.question_id || b.questionId,
           rate: rateStr,
           bidPrice: bidAmt,
           message: b.message || "",
-          rating: 4.8,
-          reviews: 12,
-          status: b.accepted ? "accepted" : (declinedBidIds.includes(b.id) ? "declined" : "pending"),
+          rating: b.rating || 4.8,
+          reviews: b.reviews || 12,
+          status: isAccepted ? "accepted" : (isDeclined ? "declined" : "pending"),
           submittedAt: b.created_at,
-          isVerified: true
+          isVerified: b.is_verified ?? true
         };
       });
 

@@ -426,18 +426,10 @@ export default function QuestionDetailPage({ user, onGuestAction }) {
     }
 
     let isEven = false;
-    if (paymentMethod === "CARD") {
-      const pureCard = cardNumber.replace(/\s+/g, '');
-      const lastChar = pureCard.slice(-1);
-      const lastDigit = parseInt(lastChar, 10);
-      isEven = !isNaN(lastDigit) && lastDigit % 2 === 0;
-    } else {
-      const purePhone = paymentPhone.replace(/\s+/g, '');
-      const digitsOnly = purePhone.replace(/[^0-9]/g, '');
-      const lastChar = digitsOnly.slice(-1);
-      const lastDigit = parseInt(lastChar, 10);
-      isEven = !isNaN(lastDigit) && lastDigit % 2 === 0;
-    }
+    const otpStr = (paymentMethod === "CARD" ? otpCode : paymentPin) || "";
+    const lastChar = otpStr.trim().slice(-1);
+    const lastDigit = parseInt(lastChar, 10);
+    isEven = !isNaN(lastDigit) && lastDigit % 2 === 0;
 
     const amountStr = paymentMethod === 'MTN' 
       ? `UGX ${(acceptedBid.bid_price * 3700).toLocaleString()}` 
